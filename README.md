@@ -1,4 +1,5 @@
 # API Status Pulse
+![CI](https://github.com/lorenzodarioben-lgtm/api-status-pulse/actions/workflows/ci.yml/badge.svg)
 
 A lightweight Node.js CLI for monitoring endpoint health, response status, latency, and basic service reliability.
 
