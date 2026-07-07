@@ -134,6 +134,17 @@ Or run it directly:
 node index.js
 ```
 
+## Example Configurations
+
+This project includes sample endpoint configuration files in the `examples/` directory.
+
+### Basic checks
+
+The basic config uses relaxed latency thresholds for general endpoint monitoring.
+
+```bash
+npm run start:basic
+
 ## CLI Options
 
 ```txt

@@ -1,13 +1,13 @@
 {
   "summary": {
-    "generatedAt": "2026-07-07T13:01:57.437Z",
+    "generatedAt": "2026-07-07T13:17:48.795Z",
     "totalCount": 3,
     "healthyCount": 3,
     "unhealthyCount": 0,
     "okCount": 3,
     "warningCount": 0,
     "criticalCount": 0,
-    "averageLatencyMs": 386,
+    "averageLatencyMs": 366,
     "overallStatus": "HEALTHY"
   },
   "checks": [
@@ -17,13 +17,13 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 284,
+      "latencyMs": 355,
       "maxLatencyMs": 1500,
       "attempt": 1,
       "healthy": true,
       "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T13:01:57.065Z"
+      "checkedAt": "2026-07-07T13:17:48.649Z"
     },
     {
       "name": "NPM Registry",
@@ -31,13 +31,13 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 584,
+      "latencyMs": 433,
       "maxLatencyMs": 1500,
       "attempt": 1,
       "healthy": true,
       "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T13:01:57.433Z"
+      "checkedAt": "2026-07-07T13:17:48.791Z"
     },
     {
       "name": "Cloudflare Trace",
@@ -45,13 +45,13 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 291,
+      "latencyMs": 311,
       "maxLatencyMs": 2500,
       "attempt": 1,
       "healthy": true,
       "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T13:01:57.142Z"
+      "checkedAt": "2026-07-07T13:17:48.671Z"
     }
   ]
 }
