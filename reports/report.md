@@ -1,15 +1,17 @@
 # API Status Pulse Report
 
-Generated at: 2026-07-07T12:10:05.781Z
+Generated at: 2026-07-07T12:17:21.863Z
 
 Overall status: **DEGRADED**
 
 Healthy endpoints: **2/3**
 
-Average latency: **400ms**
+Severity breakdown: **2 OK**, **0 WARNING**, **1 CRITICAL**
 
-| Endpoint | Status Code | Latency | Result | Reason |
-|---|---:|---:|---|---|
-| GitHub API | 200 | 173ms | Healthy | Healthy |
-| NPM Registry | 200 | 628ms | Healthy | Healthy |
-| Deakin Website | 403 | 400ms | Unhealthy | Unexpected status code: 403 |
+Average latency: **345ms**
+
+| Endpoint | Status Code | Latency | Severity | Health | Reason |
+|---|---:|---:|---|---|---|
+| GitHub API | 200 | 337ms | OK | Healthy | Healthy |
+| NPM Registry | 200 | 509ms | OK | Healthy | Healthy |
+| Deakin Website | 403 | 189ms | CRITICAL | Unhealthy | Unexpected status code: 403 |

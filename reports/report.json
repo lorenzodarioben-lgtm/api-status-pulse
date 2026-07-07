@@ -1,10 +1,13 @@
 {
   "summary": {
-    "generatedAt": "2026-07-07T12:10:05.780Z",
+    "generatedAt": "2026-07-07T12:17:21.863Z",
     "totalCount": 3,
     "healthyCount": 2,
     "unhealthyCount": 1,
-    "averageLatencyMs": 400,
+    "okCount": 2,
+    "warningCount": 0,
+    "criticalCount": 1,
+    "averageLatencyMs": 345,
     "overallStatus": "DEGRADED"
   },
   "checks": [
@@ -14,12 +17,13 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 173,
+      "latencyMs": 337,
       "maxLatencyMs": 1500,
-      "attempt": 2,
+      "attempt": 1,
       "healthy": true,
+      "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T12:10:05.114Z"
+      "checkedAt": "2026-07-07T12:17:21.625Z"
     },
     {
       "name": "NPM Registry",
@@ -27,12 +31,13 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 628,
+      "latencyMs": 509,
       "maxLatencyMs": 1500,
-      "attempt": 2,
+      "attempt": 1,
       "healthy": true,
+      "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T12:10:05.777Z"
+      "checkedAt": "2026-07-07T12:17:21.860Z"
     },
     {
       "name": "Deakin Website",
@@ -40,12 +45,13 @@
       "method": "GET",
       "status": 403,
       "statusText": "Forbidden",
-      "latencyMs": 400,
+      "latencyMs": 189,
       "maxLatencyMs": 2500,
       "attempt": 2,
       "healthy": false,
+      "severity": "CRITICAL",
       "reason": "Unexpected status code: 403",
-      "checkedAt": "2026-07-07T12:10:05.476Z"
+      "checkedAt": "2026-07-07T12:17:21.859Z"
     }
   ]
 }

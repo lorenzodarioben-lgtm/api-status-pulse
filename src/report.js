@@ -8,7 +8,7 @@ function printResults(results) {
   console.log("Endpoint health monitor\n");
 
   for (const result of results) {
-    const icon = result.healthy ? "✅" : "❌";
+    const icon = getSeverityIcon(result.severity);
     const latency =
       result.latencyMs === null ? "-" : `${String(result.latencyMs).padStart(4)}ms`;
 
@@ -16,16 +16,19 @@ function printResults(results) {
       result.maxLatencyMs === null ? "no limit" : `limit ${result.maxLatencyMs}ms`;
 
     console.log(`${icon} ${result.name}`);
-    console.log(`   URL:     ${result.url}`);
-    console.log(`   Status:  ${result.status} ${result.statusText}`);
-    console.log(`   Latency: ${latency} (${limit})`);
-    console.log(`   Attempt: ${result.attempt}`);
-    console.log(`   Result:  ${result.reason}\n`);
+    console.log(`   URL:      ${result.url}`);
+    console.log(`   Status:   ${result.status} ${result.statusText}`);
+    console.log(`   Latency:  ${latency} (${limit})`);
+    console.log(`   Severity: ${result.severity ?? "UNKNOWN"}`);
+    console.log(`   Attempt:  ${result.attempt}`);
+    console.log(`   Result:   ${result.reason}\n`);
   }
 
   const summary = buildSummary(results);
 
   console.log(`Summary: ${summary.healthyCount}/${summary.totalCount} healthy`);
+  console.log(`Severity: ${summary.okCount} OK, ${summary.warningCount} WARNING, ${summary.criticalCount} CRITICAL`);
+  console.log(`Average latency: ${summary.averageLatencyMs === null ? "-" : `${summary.averageLatencyMs}ms`}`);
   console.log(`Overall status: ${summary.overallStatus}\n`);
 }
 
@@ -45,22 +48,27 @@ function saveReports(results) {
 function buildSummary(results) {
   const healthyCount = results.filter((result) => result.healthy).length;
   const unhealthyCount = results.length - healthyCount;
-  const totalLatency = results
-    .filter((result) => typeof result.latencyMs === "number")
-    .reduce((sum, result) => sum + result.latencyMs, 0);
 
-  const measuredCount = results.filter((result) => typeof result.latencyMs === "number").length;
+  const okCount = results.filter((result) => result.severity === "OK").length;
+  const warningCount = results.filter((result) => result.severity === "WARNING").length;
+  const criticalCount = results.filter((result) => result.severity === "CRITICAL").length;
+
+  const measuredResults = results.filter((result) => typeof result.latencyMs === "number");
+  const totalLatency = measuredResults.reduce((sum, result) => sum + result.latencyMs, 0);
 
   const averageLatencyMs =
-    measuredCount === 0 ? null : Math.round(totalLatency / measuredCount);
+    measuredResults.length === 0 ? null : Math.round(totalLatency / measuredResults.length);
 
   return {
     generatedAt: new Date().toISOString(),
     totalCount: results.length,
     healthyCount,
     unhealthyCount,
+    okCount,
+    warningCount,
+    criticalCount,
     averageLatencyMs,
-    overallStatus: unhealthyCount === 0 ? "HEALTHY" : "DEGRADED",
+    overallStatus: criticalCount === 0 ? "HEALTHY" : "DEGRADED",
   };
 }
 
@@ -76,10 +84,11 @@ function buildMarkdownReport(results) {
 
   const rows = results
     .map((result) => {
-      const status = result.healthy ? "Healthy" : "Unhealthy";
+      const health = result.healthy ? "Healthy" : "Unhealthy";
       const latency = result.latencyMs === null ? "-" : `${result.latencyMs}ms`;
+      const severity = result.severity ?? "UNKNOWN";
 
-      return `| ${result.name} | ${result.status} | ${latency} | ${status} | ${result.reason} |`;
+      return `| ${result.name} | ${result.status} | ${latency} | ${severity} | ${health} | ${result.reason} |`;
     })
     .join("\n");
 
@@ -94,12 +103,30 @@ Overall status: **${summary.overallStatus}**
 
 Healthy endpoints: **${summary.healthyCount}/${summary.totalCount}**
 
+Severity breakdown: **${summary.okCount} OK**, **${summary.warningCount} WARNING**, **${summary.criticalCount} CRITICAL**
+
 Average latency: **${averageLatency}**
 
-| Endpoint | Status Code | Latency | Result | Reason |
-|---|---:|---:|---|---|
+| Endpoint | Status Code | Latency | Severity | Health | Reason |
+|---|---:|---:|---|---|---|
 ${rows}
 `;
+}
+
+function getSeverityIcon(severity) {
+  if (severity === "OK") {
+    return "✅";
+  }
+
+  if (severity === "WARNING") {
+    return "⚠️";
+  }
+
+  if (severity === "CRITICAL") {
+    return "❌";
+  }
+
+  return "❓";
 }
 
 module.exports = {
@@ -108,4 +135,5 @@ module.exports = {
   buildSummary,
   buildJsonReport,
   buildMarkdownReport,
+  getSeverityIcon,
 };

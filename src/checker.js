@@ -1,3 +1,5 @@
+const { getSeverity } = require("./severity");
+
 async function checkEndpoint(check) {
   const retries = check.retries ?? 0;
   let lastResult = null;
@@ -41,6 +43,13 @@ async function runSingleAttempt(check, attempt) {
         : true;
 
     const healthy = statusOk && latencyOk;
+    const severity = getSeverity({
+      healthy,
+      statusOk,
+      latencyOk,
+      latencyMs,
+      maxLatencyMs: check.maxLatencyMs,
+    });
 
     return {
       name: check.name,
@@ -52,6 +61,7 @@ async function runSingleAttempt(check, attempt) {
       maxLatencyMs: check.maxLatencyMs ?? null,
       attempt,
       healthy,
+      severity,
       reason: getReason(statusOk, latencyOk, response.status, latencyMs, check),
       checkedAt: new Date().toISOString(),
     };
@@ -68,6 +78,7 @@ async function runSingleAttempt(check, attempt) {
       maxLatencyMs: check.maxLatencyMs ?? null,
       attempt,
       healthy: false,
+      severity: "CRITICAL",
       reason: error.name === "AbortError" ? "Request timed out" : error.message,
       checkedAt: new Date().toISOString(),
     };
