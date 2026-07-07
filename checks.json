@@ -18,10 +18,10 @@
     "retries": 1
   },
   {
-    "name": "Deakin Website",
-    "url": "https://www.deakin.edu.au",
+    "name": "Cloudflare Trace",
+    "url": "https://www.cloudflare.com/cdn-cgi/trace",
     "method": "GET",
-    "expectedStatus": [200, 301, 302],
+    "expectedStatus": [200],
     "timeoutMs": 5000,
     "maxLatencyMs": 2500,
     "retries": 1

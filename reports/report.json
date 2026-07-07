@@ -1,14 +1,14 @@
 {
   "summary": {
-    "generatedAt": "2026-07-07T12:39:40.462Z",
+    "generatedAt": "2026-07-07T13:01:57.437Z",
     "totalCount": 3,
-    "healthyCount": 2,
-    "unhealthyCount": 1,
-    "okCount": 2,
+    "healthyCount": 3,
+    "unhealthyCount": 0,
+    "okCount": 3,
     "warningCount": 0,
-    "criticalCount": 1,
-    "averageLatencyMs": 284,
-    "overallStatus": "DEGRADED"
+    "criticalCount": 0,
+    "averageLatencyMs": 386,
+    "overallStatus": "HEALTHY"
   },
   "checks": [
     {
@@ -17,13 +17,13 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 300,
+      "latencyMs": 284,
       "maxLatencyMs": 1500,
       "attempt": 1,
       "healthy": true,
       "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T12:39:40.226Z"
+      "checkedAt": "2026-07-07T13:01:57.065Z"
     },
     {
       "name": "NPM Registry",
@@ -31,27 +31,27 @@
       "method": "GET",
       "status": 200,
       "statusText": "OK",
-      "latencyMs": 364,
+      "latencyMs": 584,
       "maxLatencyMs": 1500,
       "attempt": 1,
       "healthy": true,
       "severity": "OK",
       "reason": "Healthy",
-      "checkedAt": "2026-07-07T12:39:40.404Z"
+      "checkedAt": "2026-07-07T13:01:57.433Z"
     },
     {
-      "name": "Deakin Website",
-      "url": "https://www.deakin.edu.au",
+      "name": "Cloudflare Trace",
+      "url": "https://www.cloudflare.com/cdn-cgi/trace",
       "method": "GET",
-      "status": 403,
-      "statusText": "Forbidden",
-      "latencyMs": 188,
+      "status": 200,
+      "statusText": "OK",
+      "latencyMs": 291,
       "maxLatencyMs": 2500,
-      "attempt": 2,
-      "healthy": false,
-      "severity": "CRITICAL",
-      "reason": "Unexpected status code: 403",
-      "checkedAt": "2026-07-07T12:39:40.458Z"
+      "attempt": 1,
+      "healthy": true,
+      "severity": "OK",
+      "reason": "Healthy",
+      "checkedAt": "2026-07-07T13:01:57.142Z"
     }
   ]
 }
