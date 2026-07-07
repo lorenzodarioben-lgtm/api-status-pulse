@@ -1,0 +1,20 @@
+[
+  {
+    "name": "GitHub API",
+    "url": "https://api.github.com",
+    "method": "GET",
+    "expectedStatus": [200],
+    "timeoutMs": 5000,
+    "maxLatencyMs": 2000,
+    "retries": 1
+  },
+  {
+    "name": "NPM Registry",
+    "url": "https://registry.npmjs.org/-/ping",
+    "method": "GET",
+    "expectedStatus": [200],
+    "timeoutMs": 5000,
+    "maxLatencyMs": 2000,
+    "retries": 1
+  }
+]
