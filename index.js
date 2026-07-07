@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const fs = require("fs");
 const path = require("path");
 
@@ -14,6 +16,33 @@ const configFile =
     ? args[configArgIndex + 1]
     : DEFAULT_CONFIG_FILE;
 
+function printHelp() {
+  console.log(`
+API Status Pulse
+
+A lightweight endpoint health monitoring CLI.
+
+Usage:
+  node index.js [options]
+
+Options:
+  --config <file>          Use a custom checks config file
+  --fail-on-unhealthy      Exit with code 1 if any endpoint is unhealthy
+  --version                Print the current version
+  --help                   Show this help message
+
+Examples:
+  node index.js
+  node index.js --config checks.json
+  node index.js --fail-on-unhealthy
+`);
+}
+
+function printVersion() {
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  console.log(packageJson.version);
+}
+
 function loadChecks(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Config file not found: ${filePath}`);
@@ -26,7 +55,37 @@ function loadChecks(filePath) {
     throw new Error("Config file must contain an array of checks.");
   }
 
+  validateChecks(checks);
+
   return checks;
+}
+
+function validateChecks(checks) {
+  for (const check of checks) {
+    if (!check.name || typeof check.name !== "string") {
+      throw new Error("Each check must have a non-empty name.");
+    }
+
+    if (!check.url || typeof check.url !== "string") {
+      throw new Error(`Check "${check.name}" must have a URL.`);
+    }
+
+    if (!check.url.startsWith("https://")) {
+      throw new Error(`Check "${check.name}" must use an HTTPS URL.`);
+    }
+
+    if (!Array.isArray(check.expectedStatus)) {
+      throw new Error(`Check "${check.name}" must define expectedStatus as an array.`);
+    }
+
+    if (typeof check.timeoutMs !== "number" || check.timeoutMs <= 0) {
+      throw new Error(`Check "${check.name}" must define a positive timeoutMs value.`);
+    }
+
+    if (typeof check.maxLatencyMs !== "number" || check.maxLatencyMs <= 0) {
+      throw new Error(`Check "${check.name}" must define a positive maxLatencyMs value.`);
+    }
+  }
 }
 
 async function checkEndpoint(check) {
@@ -192,6 +251,16 @@ ${rows}
 
 async function main() {
   try {
+    if (args.includes("--help")) {
+      printHelp();
+      return;
+    }
+
+    if (args.includes("--version")) {
+      printVersion();
+      return;
+    }
+
     const checks = loadChecks(configFile);
     const results = await Promise.all(checks.map(checkEndpoint));
 
