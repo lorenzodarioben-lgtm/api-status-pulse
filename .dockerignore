@@ -1,3 +1,4 @@
+@'
 .git
 .github
 node_modules
@@ -5,3 +6,4 @@ reports
 .env
 .DS_Store
 npm-debug.log
+'@ | Set-Content -NoNewline .dockerignore
