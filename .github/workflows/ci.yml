@@ -27,3 +27,6 @@ jobs:
 
       - name: Run health monitor
         run: npm run start
+
+      - name: Build Docker image
+        run: docker build -t api-status-pulse .

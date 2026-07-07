@@ -1,7 +1,7 @@
 {
   "name": "api-status-pulse",
   "version": "1.0.0",
-  "description": "A lightweight endpoint health monitoring CLI with latency thresholds, retries, reports, and CI validation.",
+  "description": "A lightweight endpoint health monitoring CLI with latency thresholds, retries, reports, CI validation, and Docker support.",
   "main": "index.js",
   "bin": {
     "api-status-pulse": "./index.js"
@@ -12,7 +12,9 @@
     "syntax": "node --check index.js",
     "test": "node --test",
     "help": "node index.js --help",
-    "version": "node index.js --version"
+    "version": "node index.js --version",
+    "docker:build": "docker build -t api-status-pulse .",
+    "docker:run": "docker run --rm api-status-pulse"
   },
   "keywords": [
     "monitoring",
@@ -21,7 +23,8 @@
     "latency",
     "nodejs",
     "cli",
-    "ci"
+    "ci",
+    "docker"
   ],
   "author": "Lorenzo Dario Ben",
   "license": "MIT"
