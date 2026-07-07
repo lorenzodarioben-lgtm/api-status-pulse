@@ -14,7 +14,9 @@
     "help": "node index.js --help",
     "version": "node index.js --version",
     "docker:build": "docker build -t api-status-pulse .",
-    "docker:run": "docker run --rm api-status-pulse"
+    "docker:run": "docker run --rm api-status-pulse",
+    "start:basic": "node index.js --config examples/basic.checks.json",
+    "start:strict": "node index.js --config examples/strict.checks.json"
   },
   "keywords": [
     "monitoring",
