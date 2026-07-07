@@ -22,5 +22,8 @@ jobs:
       - name: Validate JavaScript syntax
         run: npm run syntax
 
+      - name: Run automated tests
+        run: npm run test
+
       - name: Run health monitor
         run: npm run start
