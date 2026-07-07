@@ -1,0 +1,30 @@
+[
+  {
+    "url": "https://www.google.com",
+    "healthy": true,
+    "status": 200,
+    "statusText": "OK",
+    "latencyMs": 508
+  },
+  {
+    "url": "https://www.github.com",
+    "healthy": true,
+    "status": 200,
+    "statusText": "OK",
+    "latencyMs": 473
+  },
+  {
+    "url": "https://www.deakin.edu.au",
+    "healthy": false,
+    "status": 403,
+    "statusText": "Forbidden",
+    "latencyMs": 280
+  },
+  {
+    "url": "https://fake-url-that-should-fail.test",
+    "healthy": false,
+    "status": "ERROR",
+    "statusText": "Failed",
+    "latencyMs": null
+  }
+]
