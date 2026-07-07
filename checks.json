@@ -1,0 +1,29 @@
+[
+  {
+    "name": "GitHub API",
+    "url": "https://api.github.com",
+    "method": "GET",
+    "expectedStatus": [200],
+    "timeoutMs": 5000,
+    "maxLatencyMs": 1500,
+    "retries": 1
+  },
+  {
+    "name": "NPM Registry",
+    "url": "https://registry.npmjs.org/-/ping",
+    "method": "GET",
+    "expectedStatus": [200],
+    "timeoutMs": 5000,
+    "maxLatencyMs": 1500,
+    "retries": 1
+  },
+  {
+    "name": "Deakin Website",
+    "url": "https://www.deakin.edu.au",
+    "method": "GET",
+    "expectedStatus": [200, 301, 302],
+    "timeoutMs": 5000,
+    "maxLatencyMs": 2500,
+    "retries": 1
+  }
+]

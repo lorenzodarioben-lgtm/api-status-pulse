@@ -1,67 +1,213 @@
 const fs = require("fs");
+const path = require("path");
 
-const urls = JSON.parse(fs.readFileSync("urls.json", "utf8"));
+const DEFAULT_CONFIG_FILE = "checks.json";
+const REPORT_DIR = "reports";
 
-const TIMEOUT_MS = 5000;
+const args = process.argv.slice(2);
 
-async function checkUrl(url) {
+const shouldFailOnUnhealthy = args.includes("--fail-on-unhealthy");
+
+const configArgIndex = args.indexOf("--config");
+const configFile =
+  configArgIndex !== -1 && args[configArgIndex + 1]
+    ? args[configArgIndex + 1]
+    : DEFAULT_CONFIG_FILE;
+
+function loadChecks(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Config file not found: ${filePath}`);
+  }
+
+  const raw = fs.readFileSync(filePath, "utf8");
+  const checks = JSON.parse(raw);
+
+  if (!Array.isArray(checks)) {
+    throw new Error("Config file must contain an array of checks.");
+  }
+
+  return checks;
+}
+
+async function checkEndpoint(check) {
+  const retries = check.retries ?? 0;
+  let lastResult = null;
+
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    const result = await runSingleAttempt(check, attempt);
+    lastResult = result;
+
+    if (result.healthy) {
+      return result;
+    }
+  }
+
+  return lastResult;
+}
+
+async function runSingleAttempt(check, attempt) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeoutMs = check.timeoutMs ?? 5000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   const start = Date.now();
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
+    const response = await fetch(check.url, {
+      method: check.method ?? "GET",
       signal: controller.signal,
+      headers: {
+        "User-Agent": "api-status-pulse",
+      },
     });
 
-    const latency = Date.now() - start;
+    const latencyMs = Date.now() - start;
     clearTimeout(timeout);
 
+    const expectedStatuses = check.expectedStatus ?? [200];
+    const statusOk = expectedStatuses.includes(response.status);
+    const latencyOk =
+      typeof check.maxLatencyMs === "number"
+        ? latencyMs <= check.maxLatencyMs
+        : true;
+
+    const healthy = statusOk && latencyOk;
+
     return {
-      url,
-      healthy: response.ok,
+      name: check.name,
+      url: check.url,
+      method: check.method ?? "GET",
       status: response.status,
       statusText: response.statusText,
-      latencyMs: latency,
+      latencyMs,
+      maxLatencyMs: check.maxLatencyMs ?? null,
+      attempt,
+      healthy,
+      reason: getReason(statusOk, latencyOk, response.status, latencyMs, check),
+      checkedAt: new Date().toISOString(),
     };
   } catch (error) {
     clearTimeout(timeout);
 
     return {
-      url,
-      healthy: false,
+      name: check.name,
+      url: check.url,
+      method: check.method ?? "GET",
       status: "ERROR",
-      statusText: error.name === "AbortError" ? "Timeout" : "Failed",
+      statusText: error.name === "AbortError" ? "Timeout" : "Request failed",
       latencyMs: null,
+      maxLatencyMs: check.maxLatencyMs ?? null,
+      attempt,
+      healthy: false,
+      reason: error.name === "AbortError" ? "Request timed out" : error.message,
+      checkedAt: new Date().toISOString(),
     };
   }
 }
 
-async function main() {
-  console.log("\nAPI Status Pulse\n");
+function getReason(statusOk, latencyOk, status, latencyMs, check) {
+  if (!statusOk) {
+    return `Unexpected status code: ${status}`;
+  }
 
-  const results = [];
+  if (!latencyOk) {
+    return `Latency ${latencyMs}ms exceeded limit of ${check.maxLatencyMs}ms`;
+  }
 
-  for (const url of urls) {
-    const result = await checkUrl(url);
-    results.push(result);
+  return "Healthy";
+}
 
+function printResults(results) {
+  console.log("\nAPI Status Pulse");
+  console.log("Endpoint health monitor\n");
+
+  for (const result of results) {
     const icon = result.healthy ? "✅" : "❌";
-    const latency = result.latencyMs === null ? "-" : `${result.latencyMs}ms`;
+    const latency =
+      result.latencyMs === null ? "-" : `${String(result.latencyMs).padStart(4)}ms`;
 
-    console.log(
-      `${icon} ${result.url.padEnd(45)} ${String(result.status).padEnd(8)} ${latency}`
-    );
+    const limit =
+      result.maxLatencyMs === null ? "no limit" : `limit ${result.maxLatencyMs}ms`;
+
+    console.log(`${icon} ${result.name}`);
+    console.log(`   URL:     ${result.url}`);
+    console.log(`   Status:  ${result.status} ${result.statusText}`);
+    console.log(`   Latency: ${latency} (${limit})`);
+    console.log(`   Attempt: ${result.attempt}`);
+    console.log(`   Result:  ${result.reason}\n`);
   }
 
   const healthyCount = results.filter((result) => result.healthy).length;
+  const totalCount = results.length;
 
-  console.log(`\nSummary: ${healthyCount}/${results.length} healthy\n`);
+  console.log(`Summary: ${healthyCount}/${totalCount} healthy`);
 
-  fs.writeFileSync("report.json", JSON.stringify(results, null, 2));
-  console.log("Saved report to report.json");
+  if (healthyCount === totalCount) {
+    console.log("Overall status: HEALTHY\n");
+  } else {
+    console.log("Overall status: DEGRADED\n");
+  }
+}
+
+function saveReports(results) {
+  fs.mkdirSync(REPORT_DIR, { recursive: true });
+
+  const jsonPath = path.join(REPORT_DIR, "report.json");
+  const markdownPath = path.join(REPORT_DIR, "report.md");
+
+  fs.writeFileSync(jsonPath, JSON.stringify(results, null, 2));
+  fs.writeFileSync(markdownPath, buildMarkdownReport(results));
+
+  console.log(`Saved JSON report to ${jsonPath}`);
+  console.log(`Saved Markdown report to ${markdownPath}`);
+}
+
+function buildMarkdownReport(results) {
+  const healthyCount = results.filter((result) => result.healthy).length;
+  const totalCount = results.length;
+  const overallStatus = healthyCount === totalCount ? "HEALTHY" : "DEGRADED";
+
+  const rows = results
+    .map((result) => {
+      const status = result.healthy ? "Healthy" : "Unhealthy";
+      const latency = result.latencyMs === null ? "-" : `${result.latencyMs}ms`;
+
+      return `| ${result.name} | ${result.status} | ${latency} | ${status} | ${result.reason} |`;
+    })
+    .join("\n");
+
+  return `# API Status Pulse Report
+
+Generated at: ${new Date().toISOString()}
+
+Overall status: **${overallStatus}**
+
+Healthy endpoints: **${healthyCount}/${totalCount}**
+
+| Endpoint | Status Code | Latency | Result | Reason |
+|---|---:|---:|---|---|
+${rows}
+`;
+}
+
+async function main() {
+  try {
+    const checks = loadChecks(configFile);
+    const results = await Promise.all(checks.map(checkEndpoint));
+
+    printResults(results);
+    saveReports(results);
+
+    const unhealthyCount = results.filter((result) => !result.healthy).length;
+
+    if (shouldFailOnUnhealthy && unhealthyCount > 0) {
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    console.error("\nFailed to run API Status Pulse");
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 }
 
 main();

@@ -1,0 +1,41 @@
+[
+  {
+    "name": "GitHub API",
+    "url": "https://api.github.com",
+    "method": "GET",
+    "status": 200,
+    "statusText": "OK",
+    "latencyMs": 272,
+    "maxLatencyMs": 1500,
+    "attempt": 1,
+    "healthy": true,
+    "reason": "Healthy",
+    "checkedAt": "2026-07-07T11:55:58.199Z"
+  },
+  {
+    "name": "NPM Registry",
+    "url": "https://registry.npmjs.org/-/ping",
+    "method": "GET",
+    "status": 200,
+    "statusText": "OK",
+    "latencyMs": 400,
+    "maxLatencyMs": 1500,
+    "attempt": 1,
+    "healthy": true,
+    "reason": "Healthy",
+    "checkedAt": "2026-07-07T11:55:58.392Z"
+  },
+  {
+    "name": "Deakin Website",
+    "url": "https://www.deakin.edu.au",
+    "method": "GET",
+    "status": 403,
+    "statusText": "Forbidden",
+    "latencyMs": 126,
+    "maxLatencyMs": 2500,
+    "attempt": 2,
+    "healthy": false,
+    "reason": "Unexpected status code: 403",
+    "checkedAt": "2026-07-07T11:55:58.368Z"
+  }
+]

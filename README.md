@@ -1,23 +1,37 @@
 # API Status Pulse
 
-A lightweight Node.js CLI tool that checks whether websites and API endpoints are healthy.
+A lightweight Node.js CLI for monitoring endpoint health, response status, latency, and basic service reliability.
+
+This project simulates a small DevOps-style health check tool. It reads endpoint checks from a JSON config file, validates each response against expected status codes and latency limits, retries failed checks, and exports machine-readable and human-readable reports.
 
 ## Features
 
-- Checks multiple URLs from a JSON config file
-- Measures response latency
-- Detects failed requests
-- Handles request timeouts
-- Prints a clean terminal summary
-- Exports results to `report.json`
+- Config-driven endpoint checks
+- Expected HTTP status validation
+- Latency threshold validation
+- Retry support for unstable endpoints
+- Timeout handling
+- Concurrent checks
+- Terminal health summary
+- JSON report export
+- Markdown report export
+- Optional CI-friendly failure mode
 
 ## Tech Stack
 
 - Node.js
 - JavaScript
 - JSON
+- GitHub Actions-ready CLI workflow
 
-## How to Run
+## Project Structure
 
-```bash
-node index.js
+```txt
+api-status-pulse/
+├─ index.js
+├─ checks.json
+├─ package.json
+├─ reports/
+│  ├─ report.json
+│  └─ report.md
+└─ README.md

@@ -1,0 +1,21 @@
+{
+  "name": "api-status-pulse",
+  "version": "1.0.0",
+  "description": "A lightweight endpoint health monitoring CLI with latency thresholds, retries, and reports.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "check": "node index.js --fail-on-unhealthy",
+    "syntax": "node --check index.js"
+  },
+  "keywords": [
+    "monitoring",
+    "health-check",
+    "devops",
+    "latency",
+    "nodejs",
+    "cli"
+  ],
+  "author": "Lorenzo Dario Ben",
+  "license": "MIT"
+}
