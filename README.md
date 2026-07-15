@@ -245,7 +245,7 @@ The JSON report is useful for scripts, automation, and CI/CD workflows.
 
 The Markdown report is useful for human-readable evidence, documentation, and GitHub review.
 
-## Example Output
+## An Example Output
 
 ```txt
 API Status Pulse
