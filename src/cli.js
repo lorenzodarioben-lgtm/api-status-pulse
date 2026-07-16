@@ -3,7 +3,7 @@ const fs = require("fs");
 const { loadChecks } = require("./config");
 const { checkEndpoint } = require("./checker");
 const { runChecks } = require("./runner");
-const { printResults, saveReports } = require("./report");
+const { printResults, saveReports, buildJsonReport } = require("./report");
 
 const DEFAULT_CONFIG_FILE = "checks.json";
 
@@ -21,6 +21,7 @@ Options:
   --concurrency <count>    Limit simultaneously running endpoint checks
   --output-dir <directory> Write reports to a custom directory
   --no-report              Do not write report files
+  --format <text|json>     Choose terminal output format
   --fail-on-unhealthy      Exit with code 1 if any endpoint is unhealthy
   --version                Print the current version
   --help                   Show this help message
@@ -77,6 +78,16 @@ function getOutputDirectory(args) {
   return getOptionValue(args, "--output-dir");
 }
 
+function getOutputFormat(args) {
+  const format = getOptionValue(args, "--format") ?? "text";
+
+  if (!["text", "json"].includes(format)) {
+    throw new Error("--format must be either text or json.");
+  }
+
+  return format;
+}
+
 async function runCli(args = process.argv.slice(2)) {
   try {
     if (args.includes("--help")) {
@@ -94,18 +105,28 @@ async function runCli(args = process.argv.slice(2)) {
     const concurrency = getConcurrency(args);
     const outputDirectory = getOutputDirectory(args);
     const shouldSkipReports = args.includes("--no-report");
+    const outputFormat = getOutputFormat(args);
 
     const checks = loadChecks(configFile);
     const results = await runChecks(checks, checkEndpoint, concurrency);
 
-    printResults(results);
+    if (outputFormat === "text") {
+      printResults(results);
+    }
 
     if (!shouldSkipReports) {
       const reportPaths = saveReports(results, outputDirectory);
-      console.log(`Saved JSON report to ${reportPaths.jsonPath}`);
-      console.log(`Saved Markdown report to ${reportPaths.markdownPath}`);
-      console.log(`Saved CSV report to ${reportPaths.csvPath}`);
-      console.log(`Saved JUnit report to ${reportPaths.junitPath}`);
+
+      if (outputFormat === "text") {
+        console.log(`Saved JSON report to ${reportPaths.jsonPath}`);
+        console.log(`Saved Markdown report to ${reportPaths.markdownPath}`);
+        console.log(`Saved CSV report to ${reportPaths.csvPath}`);
+        console.log(`Saved JUnit report to ${reportPaths.junitPath}`);
+      }
+    }
+
+    if (outputFormat === "json") {
+      console.log(JSON.stringify(buildJsonReport(results), null, 2));
     }
 
     const unhealthyCount = results.filter((result) => !result.healthy).length;
@@ -128,4 +149,5 @@ module.exports = {
   getOptionValue,
   getConcurrency,
   getOutputDirectory,
+  getOutputFormat,
 };

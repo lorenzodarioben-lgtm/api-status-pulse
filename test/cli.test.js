@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOutputDirectory } = require("../src/cli");
+const { getOptionValue, getOutputDirectory, getOutputFormat } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -18,6 +18,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /--concurrency <count>/);
   assert.match(result.stdout, /--output-dir <directory>/);
   assert.match(result.stdout, /--no-report/);
+  assert.match(result.stdout, /--format <text\|json>/);
   assert.match(result.stdout, /--fail-on-unhealthy/);
 });
 
@@ -28,6 +29,12 @@ test("--version prints package version", () => {
 
   assert.equal(result.status, 0);
   assert.equal(result.stdout.trim(), packageJson.version);
+});
+
+test("validates machine-readable output formats", () => {
+  assert.equal(getOutputFormat([]), "text");
+  assert.equal(getOutputFormat(["--format", "json"]), "json");
+  assert.throws(() => getOutputFormat(["--format", "yaml"]), /text or json/);
 });
 
 test("parses report output options and rejects missing values", () => {
