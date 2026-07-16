@@ -37,11 +37,13 @@ function saveReports(results, reportDirectory = REPORT_DIR) {
 
   const jsonPath = path.join(reportDirectory, "report.json");
   const markdownPath = path.join(reportDirectory, "report.md");
+  const csvPath = path.join(reportDirectory, "report.csv");
 
   fs.writeFileSync(jsonPath, JSON.stringify(buildJsonReport(results), null, 2));
   fs.writeFileSync(markdownPath, buildMarkdownReport(results));
+  fs.writeFileSync(csvPath, buildCsvReport(results));
 
-  return { jsonPath, markdownPath };
+  return { jsonPath, markdownPath, csvPath };
 }
 
 function buildSummary(results) {
@@ -112,6 +114,32 @@ ${rows}
 `;
 }
 
+function buildCsvReport(results) {
+  const headers = ["name", "url", "method", "status", "latencyMs", "severity", "healthy", "attempt", "reason"];
+  const rows = results.map((result) =>
+    [
+      result.name,
+      result.url,
+      result.method,
+      result.status,
+      result.latencyMs,
+      result.severity,
+      result.healthy,
+      result.attempt,
+      result.reason,
+    ]
+      .map(escapeCsvValue)
+      .join(","),
+  );
+
+  return [headers.join(","), ...rows].join("\n").concat("\n");
+}
+
+function escapeCsvValue(value) {
+  const stringValue = value ?? "";
+  return `"${String(stringValue).replaceAll('"', '""')}"`;
+}
+
 function getSeverityIcon(severity) {
   if (severity === "OK") {
     return "✅";
@@ -134,5 +162,7 @@ module.exports = {
   buildSummary,
   buildJsonReport,
   buildMarkdownReport,
+  buildCsvReport,
+  escapeCsvValue,
   getSeverityIcon,
 };

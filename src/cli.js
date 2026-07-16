@@ -104,6 +104,7 @@ async function runCli(args = process.argv.slice(2)) {
       const reportPaths = saveReports(results, outputDirectory);
       console.log(`Saved JSON report to ${reportPaths.jsonPath}`);
       console.log(`Saved Markdown report to ${reportPaths.markdownPath}`);
+      console.log(`Saved CSV report to ${reportPaths.csvPath}`);
     }
 
     const unhealthyCount = results.filter((result) => !result.healthy).length;
