@@ -60,6 +60,7 @@ function validateCheck(check) {
   }
 
   validateHeaders(check.headers, "headers", check.name);
+  validateHeaders(check.expectedHeaders, "expectedHeaders", check.name);
 
   for (const status of check.expectedStatus) {
     if (typeof status !== "number" || status < 100 || status > 599) {

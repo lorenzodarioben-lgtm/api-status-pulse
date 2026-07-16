@@ -64,3 +64,14 @@ test("validates optional latency warning ratios", () => {
     /warningLatencyRatio between 0/,
   );
 });
+
+test("allows expected response headers", () => {
+  assert.doesNotThrow(() => {
+    validateCheck({ ...validCheck, expectedHeaders: { "x-service-state": "ready" } });
+  });
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, expectedHeaders: { "x-service-state": false } }),
+    /invalid expectedHeaders entry/,
+  );
+});

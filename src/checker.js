@@ -36,12 +36,14 @@ async function runSingleAttempt(check, attempt) {
 
     const expectedStatuses = check.expectedStatus ?? [200];
     const statusOk = expectedStatuses.includes(response.status);
+    const headerChecks = getExpectedHeaderChecks(response.headers, check.expectedHeaders);
+    const headersOk = headerChecks.every((header) => header.matches);
     const latencyOk =
       typeof check.maxLatencyMs === "number"
         ? latencyMs <= check.maxLatencyMs
         : true;
 
-    const healthy = statusOk && latencyOk;
+    const healthy = statusOk && latencyOk && headersOk;
     const severity = getSeverity({
       healthy,
       statusOk,
@@ -63,7 +65,8 @@ async function runSingleAttempt(check, attempt) {
       attempt,
       healthy,
       severity,
-      reason: getReason(statusOk, latencyOk, response.status, latencyMs, check),
+      reason: getReason(statusOk, latencyOk, headersOk, response.status, latencyMs, check, headerChecks),
+      headerChecks,
       checkedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -82,6 +85,7 @@ async function runSingleAttempt(check, attempt) {
       healthy: false,
       severity: "CRITICAL",
       reason: error.name === "AbortError" ? "Request timed out" : error.message,
+      headerChecks: [],
       checkedAt: new Date().toISOString(),
     };
   }
@@ -97,13 +101,31 @@ function buildRequestHeaders(headers = {}) {
   return requestHeaders;
 }
 
-function getReason(statusOk, latencyOk, status, latencyMs, check) {
+function getExpectedHeaderChecks(responseHeaders, expectedHeaders = {}) {
+  return Object.entries(expectedHeaders).map(([name, expectedValue]) => {
+    const actualValue = responseHeaders.get(name);
+
+    return {
+      name,
+      expectedValue,
+      actualValue,
+      matches: actualValue === expectedValue,
+    };
+  });
+}
+
+function getReason(statusOk, latencyOk, headersOk, status, latencyMs, check, headerChecks = []) {
   if (!statusOk) {
     return `Unexpected status code: ${status}`;
   }
 
   if (!latencyOk) {
     return `Latency ${latencyMs}ms exceeded limit of ${check.maxLatencyMs}ms`;
+  }
+
+  if (!headersOk) {
+    const failedHeader = headerChecks.find((header) => !header.matches);
+    return `Unexpected response header ${failedHeader.name}: ${failedHeader.actualValue ?? "missing"}`;
   }
 
   return "Healthy";
@@ -114,4 +136,5 @@ module.exports = {
   runSingleAttempt,
   getReason,
   buildRequestHeaders,
+  getExpectedHeaderChecks,
 };
