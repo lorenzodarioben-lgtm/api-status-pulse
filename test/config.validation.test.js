@@ -33,3 +33,23 @@ test("rejects malformed request headers", () => {
     /invalid headers entry/,
   );
 });
+
+test("allows string request bodies only for POST checks", () => {
+  assert.doesNotThrow(() => {
+    validateCheck({
+      ...validCheck,
+      method: "POST",
+      body: JSON.stringify({ probe: true }),
+    });
+  });
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, body: "not allowed for GET" }),
+    /cannot define body for GET requests/,
+  );
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, method: "POST", body: { probe: true } }),
+    /must define body as a string/,
+  );
+});

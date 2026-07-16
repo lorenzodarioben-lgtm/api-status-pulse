@@ -28,6 +28,7 @@ async function runSingleAttempt(check, attempt) {
       method: check.method ?? "GET",
       signal: controller.signal,
       headers: buildRequestHeaders(check.headers),
+      body: check.body,
     });
 
     const latencyMs = Date.now() - start;

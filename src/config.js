@@ -43,8 +43,16 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must define an HTTP method.`);
   }
 
-  if (!["GET", "POST", "HEAD"].includes(check.method)) {
+  if (!check.method || !["GET", "POST", "HEAD"].includes(check.method)) {
     throw new Error(`Check "${check.name}" uses an unsupported HTTP method.`);
+  }
+
+  if (check.body !== undefined && typeof check.body !== "string") {
+    throw new Error(`Check "${check.name}" must define body as a string.`);
+  }
+
+  if (check.body !== undefined && ["GET", "HEAD"].includes(check.method)) {
+    throw new Error(`Check "${check.name}" cannot define body for ${check.method} requests.`);
   }
 
   if (!Array.isArray(check.expectedStatus) || check.expectedStatus.length === 0) {
