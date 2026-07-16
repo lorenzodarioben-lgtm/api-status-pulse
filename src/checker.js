@@ -27,9 +27,7 @@ async function runSingleAttempt(check, attempt) {
     const response = await fetch(check.url, {
       method: check.method ?? "GET",
       signal: controller.signal,
-      headers: {
-        "User-Agent": "api-status-pulse",
-      },
+      headers: buildRequestHeaders(check.headers),
     });
 
     const latencyMs = Date.now() - start;
@@ -85,6 +83,16 @@ async function runSingleAttempt(check, attempt) {
   }
 }
 
+function buildRequestHeaders(headers = {}) {
+  const requestHeaders = new Headers({ "User-Agent": "api-status-pulse" });
+
+  for (const [name, value] of Object.entries(headers)) {
+    requestHeaders.set(name, value);
+  }
+
+  return requestHeaders;
+}
+
 function getReason(statusOk, latencyOk, status, latencyMs, check) {
   if (!statusOk) {
     return `Unexpected status code: ${status}`;
@@ -101,4 +109,5 @@ module.exports = {
   checkEndpoint,
   runSingleAttempt,
   getReason,
+  buildRequestHeaders,
 };

@@ -51,6 +51,8 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must define expectedStatus as a non-empty array.`);
   }
 
+  validateHeaders(check.headers, "headers", check.name);
+
   for (const status of check.expectedStatus) {
     if (typeof status !== "number" || status < 100 || status > 599) {
       throw new Error(`Check "${check.name}" has an invalid HTTP status code.`);
@@ -70,6 +72,22 @@ function validateCheck(check) {
   }
 }
 
+function validateHeaders(headers, fieldName, checkName) {
+  if (headers === undefined) {
+    return;
+  }
+
+  if (!headers || Array.isArray(headers) || typeof headers !== "object") {
+    throw new Error(`Check "${checkName}" must define ${fieldName} as an object of string values.`);
+  }
+
+  for (const [headerName, headerValue] of Object.entries(headers)) {
+    if (!headerName.trim() || typeof headerValue !== "string") {
+      throw new Error(`Check "${checkName}" has an invalid ${fieldName} entry.`);
+    }
+  }
+}
+
 function validateUniqueValues(checks, fieldName) {
   const values = checks.map((check) => check[fieldName]);
   const uniqueValues = new Set(values);
@@ -83,4 +101,5 @@ module.exports = {
   loadChecks,
   validateChecks,
   validateCheck,
+  validateHeaders,
 };
