@@ -88,6 +88,22 @@ function validateCheck(check) {
   if (typeof check.retries !== "number" || check.retries < 0) {
     throw new Error(`Check "${check.name}" must define retries as zero or more.`);
   }
+
+  if (
+    check.retryDelayMs !== undefined &&
+    (!Number.isInteger(check.retryDelayMs) || check.retryDelayMs < 0 || check.retryDelayMs > 60000)
+  ) {
+    throw new Error(`Check "${check.name}" must define retryDelayMs between 0 and 60000 milliseconds.`);
+  }
+
+  if (
+    check.retryBackoffMultiplier !== undefined &&
+    (typeof check.retryBackoffMultiplier !== "number" ||
+      check.retryBackoffMultiplier < 1 ||
+      check.retryBackoffMultiplier > 10)
+  ) {
+    throw new Error(`Check "${check.name}" must define retryBackoffMultiplier between 1 and 10.`);
+  }
 }
 
 function validateHeaders(headers, fieldName, checkName) {

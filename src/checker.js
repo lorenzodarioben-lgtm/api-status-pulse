@@ -11,6 +11,10 @@ async function checkEndpoint(check) {
     if (result.healthy) {
       return result;
     }
+
+    if (attempt <= retries) {
+      await sleep(getRetryDelay(check, attempt));
+    }
   }
 
   return lastResult;
@@ -91,6 +95,17 @@ async function runSingleAttempt(check, attempt) {
   }
 }
 
+function getRetryDelay(check, failedAttempts) {
+  const initialDelay = check.retryDelayMs ?? 0;
+  const multiplier = check.retryBackoffMultiplier ?? 1;
+
+  return Math.round(initialDelay * multiplier ** (failedAttempts - 1));
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 function buildRequestHeaders(headers = {}) {
   const requestHeaders = new Headers({ "User-Agent": "api-status-pulse" });
 
@@ -137,4 +152,5 @@ module.exports = {
   getReason,
   buildRequestHeaders,
   getExpectedHeaderChecks,
+  getRetryDelay,
 };

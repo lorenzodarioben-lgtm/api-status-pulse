@@ -75,3 +75,19 @@ test("allows expected response headers", () => {
     /invalid expectedHeaders entry/,
   );
 });
+
+test("validates bounded retry delay settings", () => {
+  assert.doesNotThrow(() => {
+    validateCheck({
+      ...validCheck,
+      retries: 2,
+      retryDelayMs: 250,
+      retryBackoffMultiplier: 2,
+    });
+  });
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, retryDelayMs: -1 }),
+    /retryDelayMs between 0 and 60000/,
+  );
+});

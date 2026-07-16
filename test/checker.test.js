@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getExpectedHeaderChecks } = require("../src/checker");
+const { getExpectedHeaderChecks, getRetryDelay } = require("../src/checker");
 
 test("evaluates configured response header expectations", () => {
   const checks = getExpectedHeaderChecks(
@@ -23,4 +23,12 @@ test("evaluates configured response header expectations", () => {
       matches: true,
     },
   ]);
+});
+
+test("calculates exponential retry delays", () => {
+  const check = { retryDelayMs: 100, retryBackoffMultiplier: 2 };
+
+  assert.equal(getRetryDelay(check, 1), 100);
+  assert.equal(getRetryDelay(check, 2), 200);
+  assert.equal(getRetryDelay(check, 3), 400);
 });
