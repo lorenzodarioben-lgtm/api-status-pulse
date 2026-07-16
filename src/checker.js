@@ -48,6 +48,7 @@ async function runSingleAttempt(check, attempt) {
       latencyOk,
       latencyMs,
       maxLatencyMs: check.maxLatencyMs,
+      warningLatencyRatio: check.warningLatencyRatio,
     });
 
     return {
@@ -58,6 +59,7 @@ async function runSingleAttempt(check, attempt) {
       statusText: response.statusText,
       latencyMs,
       maxLatencyMs: check.maxLatencyMs ?? null,
+      warningLatencyRatio: check.warningLatencyRatio ?? 0.8,
       attempt,
       healthy,
       severity,
@@ -75,6 +77,7 @@ async function runSingleAttempt(check, attempt) {
       statusText: error.name === "AbortError" ? "Timeout" : "Request failed",
       latencyMs: null,
       maxLatencyMs: check.maxLatencyMs ?? null,
+      warningLatencyRatio: check.warningLatencyRatio ?? 0.8,
       attempt,
       healthy: false,
       severity: "CRITICAL",

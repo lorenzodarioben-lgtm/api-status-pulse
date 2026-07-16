@@ -75,6 +75,15 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must define a positive maxLatencyMs value.`);
   }
 
+  if (
+    check.warningLatencyRatio !== undefined &&
+    (typeof check.warningLatencyRatio !== "number" ||
+      check.warningLatencyRatio <= 0 ||
+      check.warningLatencyRatio > 1)
+  ) {
+    throw new Error(`Check "${check.name}" must define warningLatencyRatio between 0 (exclusive) and 1.`);
+  }
+
   if (typeof check.retries !== "number" || check.retries < 0) {
     throw new Error(`Check "${check.name}" must define retries as zero or more.`);
   }

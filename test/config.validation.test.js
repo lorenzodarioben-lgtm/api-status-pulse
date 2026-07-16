@@ -53,3 +53,14 @@ test("allows string request bodies only for POST checks", () => {
     /must define body as a string/,
   );
 });
+
+test("validates optional latency warning ratios", () => {
+  assert.doesNotThrow(() => {
+    validateCheck({ ...validCheck, warningLatencyRatio: 0.65 });
+  });
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, warningLatencyRatio: 0 }),
+    /warningLatencyRatio between 0/,
+  );
+});

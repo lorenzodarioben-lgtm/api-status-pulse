@@ -1,4 +1,11 @@
-function getSeverity({ healthy, statusOk, latencyOk, latencyMs, maxLatencyMs }) {
+function getSeverity({
+  healthy,
+  statusOk,
+  latencyOk,
+  latencyMs,
+  maxLatencyMs,
+  warningLatencyRatio = 0.8,
+}) {
   if (!healthy || !statusOk || !latencyOk) {
     return "CRITICAL";
   }
@@ -6,7 +13,7 @@ function getSeverity({ healthy, statusOk, latencyOk, latencyMs, maxLatencyMs }) 
   if (
     typeof latencyMs === "number" &&
     typeof maxLatencyMs === "number" &&
-    latencyMs >= maxLatencyMs * 0.8
+    latencyMs >= maxLatencyMs * warningLatencyRatio
   ) {
     return "WARNING";
   }

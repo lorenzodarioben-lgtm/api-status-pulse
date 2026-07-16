@@ -50,3 +50,16 @@ test("returns CRITICAL when latency exceeds limit", () => {
 
   assert.equal(severity, "CRITICAL");
 });
+
+test("uses a check-specific latency warning ratio", () => {
+  const severity = getSeverity({
+    healthy: true,
+    statusOk: true,
+    latencyOk: true,
+    latencyMs: 700,
+    maxLatencyMs: 1000,
+    warningLatencyRatio: 0.65,
+  });
+
+  assert.equal(severity, "WARNING");
+});
