@@ -9,6 +9,7 @@ const {
   buildJsonReport,
   buildMarkdownReport,
   buildCsvReport,
+  buildJUnitReport,
   saveReports,
 } = require("../src/report");
 
@@ -82,9 +83,19 @@ test("saveReports writes to a caller-provided directory", () => {
   assert.equal(paths.jsonPath, path.join(reportDirectory, "report.json"));
   assert.equal(paths.markdownPath, path.join(reportDirectory, "report.md"));
   assert.equal(paths.csvPath, path.join(reportDirectory, "report.csv"));
+  assert.equal(paths.junitPath, path.join(reportDirectory, "report.junit.xml"));
   assert.ok(fs.existsSync(paths.jsonPath));
   assert.ok(fs.existsSync(paths.markdownPath));
   assert.ok(fs.existsSync(paths.csvPath));
+  assert.ok(fs.existsSync(paths.junitPath));
+});
+
+test("buildJUnitReport describes successful and failed checks", () => {
+  const junit = buildJUnitReport(sampleResults);
+
+  assert.match(junit, /<testsuite name="api-status-pulse" tests="3" failures="1"/);
+  assert.match(junit, /<testcase name="Healthy API"/);
+  assert.match(junit, /<failure message="Request failed">ERROR<\/failure>/);
 });
 
 test("buildCsvReport produces escaped, tabular output", () => {

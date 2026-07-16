@@ -38,12 +38,14 @@ function saveReports(results, reportDirectory = REPORT_DIR) {
   const jsonPath = path.join(reportDirectory, "report.json");
   const markdownPath = path.join(reportDirectory, "report.md");
   const csvPath = path.join(reportDirectory, "report.csv");
+  const junitPath = path.join(reportDirectory, "report.junit.xml");
 
   fs.writeFileSync(jsonPath, JSON.stringify(buildJsonReport(results), null, 2));
   fs.writeFileSync(markdownPath, buildMarkdownReport(results));
   fs.writeFileSync(csvPath, buildCsvReport(results));
+  fs.writeFileSync(junitPath, buildJUnitReport(results));
 
-  return { jsonPath, markdownPath, csvPath };
+  return { jsonPath, markdownPath, csvPath, junitPath };
 }
 
 function buildSummary(results) {
@@ -140,6 +142,43 @@ function escapeCsvValue(value) {
   return `"${String(stringValue).replaceAll('"', '""')}"`;
 }
 
+function buildJUnitReport(results) {
+  const summary = buildSummary(results);
+  const testCases = results
+    .map((result) => {
+      const durationSeconds = typeof result.latencyMs === "number" ? result.latencyMs / 1000 : 0;
+      const attributes = `name="${escapeXml(result.name)}" classname="api-status-pulse" time="${durationSeconds}"`;
+
+      if (result.healthy) {
+        return `  <testcase ${attributes} />`;
+      }
+
+      return [
+        `  <testcase ${attributes}>`,
+        `    <failure message="${escapeXml(result.reason)}">${escapeXml(`${result.status} ${result.statusText ?? ""}`.trim())}</failure>`,
+        "  </testcase>",
+      ].join("\n");
+    })
+    .join("\n");
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    `<testsuite name="api-status-pulse" tests="${summary.totalCount}" failures="${summary.unhealthyCount}" timestamp="${summary.generatedAt}">`,
+    testCases,
+    "</testsuite>",
+    "",
+  ].join("\n");
+}
+
+function escapeXml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
 function getSeverityIcon(severity) {
   if (severity === "OK") {
     return "✅";
@@ -164,5 +203,7 @@ module.exports = {
   buildMarkdownReport,
   buildCsvReport,
   escapeCsvValue,
+  buildJUnitReport,
+  escapeXml,
   getSeverityIcon,
 };
