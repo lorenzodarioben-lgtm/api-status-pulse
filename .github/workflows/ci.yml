@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Checkout repository
@@ -20,22 +25,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
-          package-manager-cache: false
+          node-version: 22
+          cache: npm
 
       - name: Show versions
         run: |
           node --version
           npm --version
 
-      - name: Validate JavaScript syntax
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate all JavaScript syntax
         run: npm run syntax
 
-      - name: Run automated tests
+      - name: Run deterministic automated tests
         run: npm run test
 
-      - name: Run health monitor
-        run: npm run start
-
-      - name: Build Docker image
-        run: docker build -t api-status-pulse .
+      - name: Build container image
+        run: docker build --tag api-status-pulse:ci .
