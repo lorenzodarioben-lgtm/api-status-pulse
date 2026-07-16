@@ -19,6 +19,8 @@ Usage:
 Options:
   --config <file>          Use a custom checks config file
   --concurrency <count>    Limit simultaneously running endpoint checks
+  --output-dir <directory> Write reports to a custom directory
+  --no-report              Do not write report files
   --fail-on-unhealthy      Exit with code 1 if any endpoint is unhealthy
   --version                Print the current version
   --help                   Show this help message
@@ -36,29 +38,43 @@ function printVersion() {
 }
 
 function getConfigFile(args) {
-  const configArgIndex = args.indexOf("--config");
-
-  if (configArgIndex !== -1 && args[configArgIndex + 1]) {
-    return args[configArgIndex + 1];
-  }
-
-  return DEFAULT_CONFIG_FILE;
+  return getOptionValue(args, "--config") ?? DEFAULT_CONFIG_FILE;
 }
 
-function getConcurrency(args) {
-  const concurrencyArgIndex = args.indexOf("--concurrency");
+function getOptionValue(args, optionName) {
+  const optionIndex = args.indexOf(optionName);
 
-  if (concurrencyArgIndex === -1) {
+  if (optionIndex === -1) {
     return undefined;
   }
 
-  const value = Number(args[concurrencyArgIndex + 1]);
+  const value = args[optionIndex + 1];
+
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${optionName} requires a value.`);
+  }
+
+  return value;
+}
+
+function getConcurrency(args) {
+  const rawValue = getOptionValue(args, "--concurrency");
+
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
+  const value = Number(rawValue);
 
   if (!Number.isInteger(value) || value < 1) {
     throw new Error("--concurrency must be a positive integer.");
   }
 
   return value;
+}
+
+function getOutputDirectory(args) {
+  return getOptionValue(args, "--output-dir");
 }
 
 async function runCli(args = process.argv.slice(2)) {
@@ -76,12 +92,19 @@ async function runCli(args = process.argv.slice(2)) {
     const shouldFailOnUnhealthy = args.includes("--fail-on-unhealthy");
     const configFile = getConfigFile(args);
     const concurrency = getConcurrency(args);
+    const outputDirectory = getOutputDirectory(args);
+    const shouldSkipReports = args.includes("--no-report");
 
     const checks = loadChecks(configFile);
     const results = await runChecks(checks, checkEndpoint, concurrency);
 
     printResults(results);
-    saveReports(results);
+
+    if (!shouldSkipReports) {
+      const reportPaths = saveReports(results, outputDirectory);
+      console.log(`Saved JSON report to ${reportPaths.jsonPath}`);
+      console.log(`Saved Markdown report to ${reportPaths.markdownPath}`);
+    }
 
     const unhealthyCount = results.filter((result) => !result.healthy).length;
 
@@ -100,5 +123,7 @@ module.exports = {
   printHelp,
   printVersion,
   getConfigFile,
+  getOptionValue,
   getConcurrency,
+  getOutputDirectory,
 };

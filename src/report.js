@@ -32,17 +32,16 @@ function printResults(results) {
   console.log(`Overall status: ${summary.overallStatus}\n`);
 }
 
-function saveReports(results) {
-  fs.mkdirSync(REPORT_DIR, { recursive: true });
+function saveReports(results, reportDirectory = REPORT_DIR) {
+  fs.mkdirSync(reportDirectory, { recursive: true });
 
-  const jsonPath = path.join(REPORT_DIR, "report.json");
-  const markdownPath = path.join(REPORT_DIR, "report.md");
+  const jsonPath = path.join(reportDirectory, "report.json");
+  const markdownPath = path.join(reportDirectory, "report.md");
 
   fs.writeFileSync(jsonPath, JSON.stringify(buildJsonReport(results), null, 2));
   fs.writeFileSync(markdownPath, buildMarkdownReport(results));
 
-  console.log(`Saved JSON report to ${jsonPath}`);
-  console.log(`Saved Markdown report to ${markdownPath}`);
+  return { jsonPath, markdownPath };
 }
 
 function buildSummary(results) {

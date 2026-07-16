@@ -1,10 +1,14 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 
 const {
   buildSummary,
   buildJsonReport,
   buildMarkdownReport,
+  saveReports,
 } = require("../src/report");
 
 const sampleResults = [
@@ -68,4 +72,14 @@ test("buildMarkdownReport includes severity summary", () => {
   assert.match(markdown, /Severity breakdown:/);
   assert.match(markdown, /Average latency: \*\*475ms\*\*/);
   assert.match(markdown, /\| Endpoint \| Status Code \| Latency \| Severity \| Health \| Reason \|/);
+});
+
+test("saveReports writes to a caller-provided directory", () => {
+  const reportDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "api-status-pulse-"));
+  const paths = saveReports(sampleResults, reportDirectory);
+
+  assert.equal(paths.jsonPath, path.join(reportDirectory, "report.json"));
+  assert.equal(paths.markdownPath, path.join(reportDirectory, "report.md"));
+  assert.ok(fs.existsSync(paths.jsonPath));
+  assert.ok(fs.existsSync(paths.markdownPath));
 });
