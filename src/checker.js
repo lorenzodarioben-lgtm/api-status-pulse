@@ -3,13 +3,15 @@ const { getSeverity } = require("./severity");
 async function checkEndpoint(check) {
   const retries = check.retries ?? 0;
   let lastResult = null;
+  const attempts = [];
 
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     const result = await runSingleAttempt(check, attempt);
     lastResult = result;
+    attempts.push(toAttemptSummary(result));
 
     if (result.healthy) {
-      return result;
+      return { ...result, attempts };
     }
 
     if (attempt <= retries) {
@@ -17,7 +19,7 @@ async function checkEndpoint(check) {
     }
   }
 
-  return lastResult;
+  return { ...lastResult, attempts };
 }
 
 async function runSingleAttempt(check, attempt) {
@@ -48,6 +50,7 @@ async function runSingleAttempt(check, attempt) {
         : true;
 
     const healthy = statusOk && latencyOk && headersOk;
+    const errorType = getErrorType(statusOk, latencyOk, headersOk);
     const severity = getSeverity({
       healthy,
       statusOk,
@@ -70,6 +73,7 @@ async function runSingleAttempt(check, attempt) {
       healthy,
       severity,
       reason: getReason(statusOk, latencyOk, headersOk, response.status, latencyMs, check, headerChecks),
+      errorType,
       headerChecks,
       checkedAt: new Date().toISOString(),
     };
@@ -89,10 +93,45 @@ async function runSingleAttempt(check, attempt) {
       healthy: false,
       severity: "CRITICAL",
       reason: error.name === "AbortError" ? "Request timed out" : error.message,
+      errorType: getNetworkErrorType(error),
       headerChecks: [],
       checkedAt: new Date().toISOString(),
     };
   }
+}
+
+function getErrorType(statusOk, latencyOk, headersOk) {
+  if (!statusOk) {
+    return "unexpected_status";
+  }
+
+  if (!latencyOk) {
+    return "latency_threshold";
+  }
+
+  if (!headersOk) {
+    return "response_header";
+  }
+
+  return null;
+}
+
+function getNetworkErrorType(error) {
+  return error.name === "AbortError" ? "timeout" : "network";
+}
+
+function toAttemptSummary(result) {
+  return {
+    attempt: result.attempt,
+    status: result.status,
+    statusText: result.statusText,
+    latencyMs: result.latencyMs,
+    healthy: result.healthy,
+    severity: result.severity,
+    reason: result.reason,
+    errorType: result.errorType,
+    checkedAt: result.checkedAt,
+  };
 }
 
 function getRetryDelay(check, failedAttempts) {
@@ -153,4 +192,7 @@ module.exports = {
   buildRequestHeaders,
   getExpectedHeaderChecks,
   getRetryDelay,
+  getErrorType,
+  getNetworkErrorType,
+  toAttemptSummary,
 };

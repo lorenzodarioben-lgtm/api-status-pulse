@@ -103,6 +103,6 @@ test("buildCsvReport produces escaped, tabular output", () => {
     { ...sampleResults[0], method: "GET", attempt: 1, reason: "Healthy, stable \"service\"" },
   ]);
 
-  assert.match(csv, /^name,url,method,status,latencyMs,severity,healthy,attempt,reason/m);
+  assert.match(csv, /^name,url,method,status,latencyMs,severity,healthy,attempt,attemptCount,errorType,reason/m);
   assert.match(csv, /"Healthy, stable ""service"""/);
 });

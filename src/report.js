@@ -22,6 +22,9 @@ function printResults(results) {
     console.log(`   Severity: ${result.severity ?? "UNKNOWN"}`);
     console.log(`   Attempt:  ${result.attempt}`);
     console.log(`   Result:   ${result.reason}\n`);
+    if (result.errorType) {
+      console.log(`   Error:    ${result.errorType}\n`);
+    }
   }
 
   const summary = buildSummary(results);
@@ -117,7 +120,7 @@ ${rows}
 }
 
 function buildCsvReport(results) {
-  const headers = ["name", "url", "method", "status", "latencyMs", "severity", "healthy", "attempt", "reason"];
+  const headers = ["name", "url", "method", "status", "latencyMs", "severity", "healthy", "attempt", "attemptCount", "errorType", "reason"];
   const rows = results.map((result) =>
     [
       result.name,
@@ -128,6 +131,8 @@ function buildCsvReport(results) {
       result.severity,
       result.healthy,
       result.attempt,
+      result.attempts?.length ?? 1,
+      result.errorType,
       result.reason,
     ]
       .map(escapeCsvValue)

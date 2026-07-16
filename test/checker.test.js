@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getExpectedHeaderChecks, getRetryDelay } = require("../src/checker");
+const { getExpectedHeaderChecks, getRetryDelay, getErrorType, getNetworkErrorType } = require("../src/checker");
 
 test("evaluates configured response header expectations", () => {
   const checks = getExpectedHeaderChecks(
@@ -31,4 +31,13 @@ test("calculates exponential retry delays", () => {
   assert.equal(getRetryDelay(check, 1), 100);
   assert.equal(getRetryDelay(check, 2), 200);
   assert.equal(getRetryDelay(check, 3), 400);
+});
+
+test("classifies endpoint and network failure causes", () => {
+  assert.equal(getErrorType(false, true, true), "unexpected_status");
+  assert.equal(getErrorType(true, false, true), "latency_threshold");
+  assert.equal(getErrorType(true, true, false), "response_header");
+  assert.equal(getErrorType(true, true, true), null);
+  assert.equal(getNetworkErrorType({ name: "AbortError" }), "timeout");
+  assert.equal(getNetworkErrorType(new Error("offline")), "network");
 });
