@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const { loadChecks } = require("./config");
 const { checkEndpoint } = require("./checker");
+const { runChecks } = require("./runner");
 const { printResults, saveReports } = require("./report");
 
 const DEFAULT_CONFIG_FILE = "checks.json";
@@ -17,6 +18,7 @@ Usage:
 
 Options:
   --config <file>          Use a custom checks config file
+  --concurrency <count>    Limit simultaneously running endpoint checks
   --fail-on-unhealthy      Exit with code 1 if any endpoint is unhealthy
   --version                Print the current version
   --help                   Show this help message
@@ -43,6 +45,22 @@ function getConfigFile(args) {
   return DEFAULT_CONFIG_FILE;
 }
 
+function getConcurrency(args) {
+  const concurrencyArgIndex = args.indexOf("--concurrency");
+
+  if (concurrencyArgIndex === -1) {
+    return undefined;
+  }
+
+  const value = Number(args[concurrencyArgIndex + 1]);
+
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error("--concurrency must be a positive integer.");
+  }
+
+  return value;
+}
+
 async function runCli(args = process.argv.slice(2)) {
   try {
     if (args.includes("--help")) {
@@ -57,9 +75,10 @@ async function runCli(args = process.argv.slice(2)) {
 
     const shouldFailOnUnhealthy = args.includes("--fail-on-unhealthy");
     const configFile = getConfigFile(args);
+    const concurrency = getConcurrency(args);
 
     const checks = loadChecks(configFile);
-    const results = await Promise.all(checks.map(checkEndpoint));
+    const results = await runChecks(checks, checkEndpoint, concurrency);
 
     printResults(results);
     saveReports(results);
@@ -81,4 +100,5 @@ module.exports = {
   printHelp,
   printVersion,
   getConfigFile,
+  getConcurrency,
 };

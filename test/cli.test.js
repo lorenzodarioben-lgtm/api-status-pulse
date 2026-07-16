@@ -14,6 +14,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /API Status Pulse/);
   assert.match(result.stdout, /Usage:/);
   assert.match(result.stdout, /--config <file>/);
+  assert.match(result.stdout, /--concurrency <count>/);
   assert.match(result.stdout, /--fail-on-unhealthy/);
 });
 
