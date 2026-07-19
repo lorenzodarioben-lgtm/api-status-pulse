@@ -80,6 +80,17 @@ test("allows expected response headers", () => {
   );
 });
 
+test("validates response header substring expectations", () => {
+  assert.doesNotThrow(() => {
+    validateCheck({ ...validCheck, expectedHeaderIncludes: { "content-type": "application/json" } });
+  });
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, expectedHeaderIncludes: { "content-type": "" } }),
+    /non-empty expectedHeaderIncludes values/,
+  );
+});
+
 test("validates bounded retry delay settings", () => {
   assert.doesNotThrow(() => {
     validateCheck({

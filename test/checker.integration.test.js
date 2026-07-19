@@ -74,6 +74,12 @@ test.before(async () => {
     if (request.url === "/created") {
       response.writeHead(201);
       response.end();
+      return;
+    }
+
+    if (request.url === "/content-type") {
+      response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      response.end("{}");
     }
   });
 
@@ -230,4 +236,20 @@ test("accepts endpoints by HTTP status class", async () => {
 
   assert.equal(result.status, 201);
   assert.equal(result.healthy, true);
+});
+
+test("matches response headers by configured substrings", async () => {
+  const result = await checkEndpoint({
+    name: "Content type",
+    url: `${baseUrl}/content-type`,
+    method: "GET",
+    expectedStatus: [200],
+    expectedHeaderIncludes: { "content-type": "application/json" },
+    timeoutMs: 1000,
+    maxLatencyMs: 1000,
+    retries: 0,
+  });
+
+  assert.equal(result.healthy, true);
+  assert.equal(result.headerChecks[0].matches, true);
 });

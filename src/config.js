@@ -84,6 +84,14 @@ function validateCheck(check) {
 
   validateHeaders(check.headers, "headers", check.name);
   validateHeaders(check.expectedHeaders, "expectedHeaders", check.name);
+  validateHeaders(check.expectedHeaderIncludes, "expectedHeaderIncludes", check.name);
+
+  if (
+    check.expectedHeaderIncludes !== undefined &&
+    Object.values(check.expectedHeaderIncludes).some((value) => value.length === 0)
+  ) {
+    throw new Error(`Check "${check.name}" must define non-empty expectedHeaderIncludes values.`);
+  }
 
   const hasExpectedStatuses = Array.isArray(check.expectedStatus) && check.expectedStatus.length > 0;
   const hasExpectedStatusClasses =

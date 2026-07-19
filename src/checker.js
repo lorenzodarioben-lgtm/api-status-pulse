@@ -48,7 +48,10 @@ async function runSingleAttempt(check, attempt) {
 
     const expectedStatuses = check.expectedStatus ?? (check.expectedStatusClasses ? [] : [200]);
     const statusOk = isExpectedStatus(response.status, expectedStatuses, check.expectedStatusClasses);
-    const headerChecks = getExpectedHeaderChecks(response.headers, check.expectedHeaders);
+    const headerChecks = [
+      ...getExpectedHeaderChecks(response.headers, check.expectedHeaders),
+      ...getExpectedHeaderIncludes(response.headers, check.expectedHeaderIncludes),
+    ];
     const headersOk = headerChecks.every((header) => header.matches);
     const bodyCheck = await getBodyCheck(response, check.expectedBodyIncludes, check.maxResponseBodyBytes);
     const bodyOk = bodyCheck?.matches ?? true;
@@ -287,6 +290,19 @@ function getExpectedHeaderChecks(responseHeaders, expectedHeaders = {}) {
   });
 }
 
+function getExpectedHeaderIncludes(responseHeaders, expectedHeaders = {}) {
+  return Object.entries(expectedHeaders).map(([name, expectedIncludes]) => {
+    const actualValue = responseHeaders.get(name);
+
+    return {
+      name,
+      expectedIncludes,
+      actualValue,
+      matches: actualValue?.includes(expectedIncludes) ?? false,
+    };
+  });
+}
+
 function getReason(statusOk, latencyOk, headersOk, bodyOk, status, latencyMs, check, headerChecks = [], bodyCheck = null) {
   if (!statusOk) {
     return `Unexpected status code: ${status}`;
@@ -319,6 +335,7 @@ module.exports = {
   getReason,
   buildRequestHeaders,
   getExpectedHeaderChecks,
+  getExpectedHeaderIncludes,
   getBodyCheck,
   readResponseBody,
   getRetryDelay,

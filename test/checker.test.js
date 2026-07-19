@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getExpectedHeaderChecks, getRetryDelay, readResponseBody, shouldRetryResult, isExpectedStatus, getErrorType, getNetworkErrorType, getNetworkErrorCode } = require("../src/checker");
+const { getExpectedHeaderChecks, getExpectedHeaderIncludes, getRetryDelay, readResponseBody, shouldRetryResult, isExpectedStatus, getErrorType, getNetworkErrorType, getNetworkErrorCode } = require("../src/checker");
 
 test("evaluates configured response header expectations", () => {
   const checks = getExpectedHeaderChecks(
@@ -20,6 +20,22 @@ test("evaluates configured response header expectations", () => {
       name: "x-service-state",
       expectedValue: "ready",
       actualValue: "ready",
+      matches: true,
+    },
+  ]);
+});
+
+test("evaluates response header substring expectations", () => {
+  const checks = getExpectedHeaderIncludes(
+    new Headers({ "content-type": "application/json; charset=utf-8" }),
+    { "content-type": "application/json" },
+  );
+
+  assert.deepEqual(checks, [
+    {
+      name: "content-type",
+      expectedIncludes: "application/json",
+      actualValue: "application/json; charset=utf-8",
       matches: true,
     },
   ]);
