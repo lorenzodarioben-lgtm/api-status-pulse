@@ -20,6 +20,7 @@ Options:
   --config <file>          Use a custom checks config file
   --concurrency <count>    Limit simultaneously running endpoint checks
   --tag <tag>              Run checks matching a tag (repeatable)
+  --dry-run                Validate and preview selected checks without requests
   --output-dir <directory> Write reports to a custom directory
   --no-report              Do not write report files
   --format <text|json>     Choose terminal output format
@@ -108,6 +109,33 @@ function getOutputFormat(args) {
   return format;
 }
 
+function buildRunPlan(checks, { configFile, tags, concurrency }) {
+  return {
+    configFile,
+    selectedCount: checks.length,
+    tags,
+    concurrency: concurrency ?? checks.length,
+    checks: checks.map((check) => ({
+      name: check.name,
+      method: check.method,
+      url: check.url,
+      tags: check.tags ?? [],
+    })),
+  };
+}
+
+function printRunPlan(plan) {
+  console.log(`\nDry run: ${plan.selectedCount} selected endpoint checks`);
+  console.log(`Config: ${plan.configFile}`);
+  console.log(`Concurrency: ${plan.concurrency}\n`);
+
+  for (const check of plan.checks) {
+    const tags = check.tags.length === 0 ? "" : ` [${check.tags.join(", ")}]`;
+    console.log(`${check.name}${tags}`);
+    console.log(`   ${check.method} ${check.url}`);
+  }
+}
+
 async function runCli(args = process.argv.slice(2)) {
   try {
     if (args.includes("--help")) {
@@ -127,12 +155,25 @@ async function runCli(args = process.argv.slice(2)) {
     const shouldSkipReports = args.includes("--no-report");
     const outputFormat = getOutputFormat(args);
     const tags = getTags(args);
+    const shouldDryRun = args.includes("--dry-run");
 
     const checks = filterChecksByTags(filterEnabledChecks(loadChecks(configFile)), tags);
 
     if (checks.length === 0) {
       const selection = tags.length === 0 ? "" : ` matching tags: ${tags.join(", ")}`;
       throw new Error(`No enabled endpoint checks were found${selection}.`);
+    }
+
+    if (shouldDryRun) {
+      const plan = buildRunPlan(checks, { configFile, tags, concurrency });
+
+      if (outputFormat === "json") {
+        console.log(JSON.stringify(plan, null, 2));
+      } else {
+        printRunPlan(plan);
+      }
+
+      return;
     }
 
     const results = await runChecks(checks, checkEndpoint, concurrency);
@@ -179,4 +220,6 @@ module.exports = {
   getOutputDirectory,
   getOutputFormat,
   getTags,
+  buildRunPlan,
+  printRunPlan,
 };

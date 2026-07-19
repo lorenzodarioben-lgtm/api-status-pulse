@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags } = require("../src/cli");
+const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags, buildRunPlan } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -17,6 +17,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /--config <file>/);
   assert.match(result.stdout, /--concurrency <count>/);
   assert.match(result.stdout, /--tag <tag>/);
+  assert.match(result.stdout, /--dry-run/);
   assert.match(result.stdout, /--output-dir <directory>/);
   assert.match(result.stdout, /--no-report/);
   assert.match(result.stdout, /--format <text\|json>/);
@@ -48,4 +49,20 @@ test("parses repeatable tag filters without allowing duplicated single options",
   assert.deepEqual(getTags(["--tag", "production", "--tag", "payments"]), ["production", "payments"]);
   assert.deepEqual(getOptionValues(["--tag", "production"], "--tag"), ["production"]);
   assert.throws(() => getOptionValue(["--config", "a.json", "--config", "b.json"], "--config"), /can only be provided once/);
+});
+
+test("builds a request-free execution plan", () => {
+  const plan = buildRunPlan(
+    [{ name: "Status", method: "GET", url: "https://example.com/status", tags: ["production"] }],
+    { configFile: "checks.json", tags: ["production"], concurrency: undefined },
+  );
+
+  assert.equal(plan.selectedCount, 1);
+  assert.equal(plan.concurrency, 1);
+  assert.deepEqual(plan.checks[0], {
+    name: "Status",
+    method: "GET",
+    url: "https://example.com/status",
+    tags: ["production"],
+  });
 });
