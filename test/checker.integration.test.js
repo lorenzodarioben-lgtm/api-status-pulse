@@ -68,6 +68,12 @@ test.before(async () => {
     if (request.url === "/large") {
       response.writeHead(200);
       response.end("x".repeat(64));
+      return;
+    }
+
+    if (request.url === "/created") {
+      response.writeHead(201);
+      response.end();
     }
   });
 
@@ -209,4 +215,19 @@ test("limits body inspection to the configured byte budget", async () => {
   assert.equal(result.healthy, false);
   assert.equal(result.errorType, "response_body_too_large");
   assert.equal(result.bodyCheck.tooLarge, true);
+});
+
+test("accepts endpoints by HTTP status class", async () => {
+  const result = await checkEndpoint({
+    name: "Created",
+    url: `${baseUrl}/created`,
+    method: "GET",
+    expectedStatusClasses: [2],
+    timeoutMs: 1000,
+    maxLatencyMs: 1000,
+    retries: 0,
+  });
+
+  assert.equal(result.status, 201);
+  assert.equal(result.healthy, true);
 });

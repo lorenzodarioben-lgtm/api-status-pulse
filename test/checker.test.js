@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getExpectedHeaderChecks, getRetryDelay, readResponseBody, shouldRetryResult, getErrorType, getNetworkErrorType, getNetworkErrorCode } = require("../src/checker");
+const { getExpectedHeaderChecks, getRetryDelay, readResponseBody, shouldRetryResult, isExpectedStatus, getErrorType, getNetworkErrorType, getNetworkErrorCode } = require("../src/checker");
 
 test("evaluates configured response header expectations", () => {
   const checks = getExpectedHeaderChecks(
@@ -38,6 +38,12 @@ test("retries only configured HTTP statuses while retaining network retries", ()
   assert.equal(shouldRetryResult({ healthy: false, status: 404 }, { retryOnStatus: [429, 503] }), false);
   assert.equal(shouldRetryResult({ healthy: false, status: "ERROR" }, { retryOnStatus: [429, 503] }), true);
   assert.equal(shouldRetryResult({ healthy: false, status: 404 }, {}), true);
+});
+
+test("matches exact HTTP statuses or whole status classes", () => {
+  assert.equal(isExpectedStatus(201, [200], [2]), true);
+  assert.equal(isExpectedStatus(204, [200], [2]), true);
+  assert.equal(isExpectedStatus(404, [200], [2]), false);
 });
 
 test("classifies endpoint and network failure causes", () => {

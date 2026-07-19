@@ -26,6 +26,10 @@ async function checkEndpoint(check) {
   return { ...lastResult, attempts };
 }
 
+function isExpectedStatus(status, expectedStatuses = [], expectedStatusClasses = []) {
+  return expectedStatuses.includes(status) || expectedStatusClasses.includes(Math.floor(status / 100));
+}
+
 async function runSingleAttempt(check, attempt) {
   const controller = new AbortController();
   const timeoutMs = check.timeoutMs ?? 5000;
@@ -42,8 +46,8 @@ async function runSingleAttempt(check, attempt) {
       redirect: check.redirect ?? "follow",
     });
 
-    const expectedStatuses = check.expectedStatus ?? [200];
-    const statusOk = expectedStatuses.includes(response.status);
+    const expectedStatuses = check.expectedStatus ?? (check.expectedStatusClasses ? [] : [200]);
+    const statusOk = isExpectedStatus(response.status, expectedStatuses, check.expectedStatusClasses);
     const headerChecks = getExpectedHeaderChecks(response.headers, check.expectedHeaders);
     const headersOk = headerChecks.every((header) => header.matches);
     const bodyCheck = await getBodyCheck(response, check.expectedBodyIncludes, check.maxResponseBodyBytes);
@@ -311,6 +315,7 @@ function getReason(statusOk, latencyOk, headersOk, bodyOk, status, latencyMs, ch
 module.exports = {
   checkEndpoint,
   runSingleAttempt,
+  isExpectedStatus,
   getReason,
   buildRequestHeaders,
   getExpectedHeaderChecks,

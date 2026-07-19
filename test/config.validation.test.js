@@ -178,3 +178,13 @@ test("bounds inspected response bodies", () => {
   assert.doesNotThrow(() => validateCheck({ ...validCheck, maxResponseBodyBytes: 1024 }));
   assert.throws(() => validateCheck({ ...validCheck, maxResponseBodyBytes: 0 }), /maxResponseBodyBytes between 1 and 1048576/);
 });
+
+test("allows expected HTTP status classes without exact statuses", () => {
+  const classBasedCheck = { ...validCheck, expectedStatus: undefined, expectedStatusClasses: [2] };
+
+  assert.doesNotThrow(() => validateCheck(classBasedCheck));
+  assert.throws(
+    () => validateCheck({ ...validCheck, expectedStatusClasses: [6] }),
+    /expectedStatusClasses as HTTP status classes from 1 to 5/,
+  );
+});

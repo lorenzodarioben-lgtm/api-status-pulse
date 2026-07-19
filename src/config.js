@@ -82,14 +82,35 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must define redirect as follow, manual, or error.`);
   }
 
-  if (!Array.isArray(check.expectedStatus) || check.expectedStatus.length === 0) {
-    throw new Error(`Check "${check.name}" must define expectedStatus as a non-empty array.`);
-  }
-
   validateHeaders(check.headers, "headers", check.name);
   validateHeaders(check.expectedHeaders, "expectedHeaders", check.name);
 
-  validateStatusCodes(check.expectedStatus, "expectedStatus", check.name);
+  const hasExpectedStatuses = Array.isArray(check.expectedStatus) && check.expectedStatus.length > 0;
+  const hasExpectedStatusClasses =
+    Array.isArray(check.expectedStatusClasses) && check.expectedStatusClasses.length > 0;
+
+  if (!hasExpectedStatuses && !hasExpectedStatusClasses) {
+    throw new Error(`Check "${check.name}" must define expectedStatus or expectedStatusClasses.`);
+  }
+
+  if (check.expectedStatus !== undefined) {
+    if (!hasExpectedStatuses) {
+      throw new Error(`Check "${check.name}" must define expectedStatus as a non-empty array.`);
+    }
+
+    validateStatusCodes(check.expectedStatus, "expectedStatus", check.name);
+  }
+
+  if (check.expectedStatusClasses !== undefined) {
+    if (
+      !hasExpectedStatusClasses ||
+      check.expectedStatusClasses.some(
+        (statusClass) => !Number.isInteger(statusClass) || statusClass < 1 || statusClass > 5,
+      )
+    ) {
+      throw new Error(`Check "${check.name}" must define expectedStatusClasses as HTTP status classes from 1 to 5.`);
+    }
+  }
 
   if (check.retryOnStatus !== undefined) {
     if (!Array.isArray(check.retryOnStatus) || check.retryOnStatus.length === 0) {
