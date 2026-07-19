@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags, buildRunPlan, buildConfigSummary } = require("../src/cli");
+const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags, buildRunPlan, buildConfigSummary, getExitCode } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -19,6 +19,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /--tag <tag>/);
   assert.match(result.stdout, /--dry-run/);
   assert.match(result.stdout, /--validate-config/);
+  assert.match(result.stdout, /--fail-on-warning/);
   assert.match(result.stdout, /--output-dir <directory>/);
   assert.match(result.stdout, /--no-report/);
   assert.match(result.stdout, /--format <text\|json>/);
@@ -81,4 +82,13 @@ test("summarizes validated config without making requests", () => {
     disabledCount: 1,
     taggedCount: 1,
   });
+});
+
+test("can treat warnings as CI failures", () => {
+  const healthyWarning = { healthy: true, severity: "WARNING" };
+  const unhealthy = { healthy: false, severity: "CRITICAL" };
+
+  assert.equal(getExitCode([healthyWarning], { shouldFailOnUnhealthy: true, shouldFailOnWarning: false }), 0);
+  assert.equal(getExitCode([healthyWarning], { shouldFailOnUnhealthy: false, shouldFailOnWarning: true }), 1);
+  assert.equal(getExitCode([unhealthy], { shouldFailOnUnhealthy: true, shouldFailOnWarning: false }), 1);
 });

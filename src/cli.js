@@ -26,6 +26,7 @@ Options:
   --no-report              Do not write report files
   --format <text|json>     Choose terminal output format
   --fail-on-unhealthy      Exit with code 1 if any endpoint is unhealthy
+  --fail-on-warning        Exit with code 1 for warnings or critical results
   --version                Print the current version
   --help                   Show this help message
 
@@ -155,6 +156,18 @@ function printConfigSummary(summary) {
   console.log(`Tagged checks: ${summary.taggedCount}`);
 }
 
+function getExitCode(results, { shouldFailOnUnhealthy, shouldFailOnWarning }) {
+  if (shouldFailOnWarning && results.some((result) => result.severity !== "OK")) {
+    return 1;
+  }
+
+  if (shouldFailOnUnhealthy && results.some((result) => !result.healthy)) {
+    return 1;
+  }
+
+  return 0;
+}
+
 async function runCli(args = process.argv.slice(2)) {
   try {
     if (args.includes("--help")) {
@@ -168,6 +181,7 @@ async function runCli(args = process.argv.slice(2)) {
     }
 
     const shouldFailOnUnhealthy = args.includes("--fail-on-unhealthy");
+    const shouldFailOnWarning = args.includes("--fail-on-warning");
     const configFile = getConfigFile(args);
     const concurrency = getConcurrency(args);
     const outputDirectory = getOutputDirectory(args);
@@ -231,11 +245,7 @@ async function runCli(args = process.argv.slice(2)) {
       console.log(JSON.stringify(buildJsonReport(results), null, 2));
     }
 
-    const unhealthyCount = results.filter((result) => !result.healthy).length;
-
-    if (shouldFailOnUnhealthy && unhealthyCount > 0) {
-      process.exitCode = 1;
-    }
+    process.exitCode = getExitCode(results, { shouldFailOnUnhealthy, shouldFailOnWarning });
   } catch (error) {
     console.error("\nFailed to run API Status Pulse");
     console.error(error.message);
@@ -258,4 +268,5 @@ module.exports = {
   printRunPlan,
   buildConfigSummary,
   printConfigSummary,
+  getExitCode,
 };
