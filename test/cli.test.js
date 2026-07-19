@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags, buildRunPlan } = require("../src/cli");
+const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags, buildRunPlan, buildConfigSummary } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -18,6 +18,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /--concurrency <count>/);
   assert.match(result.stdout, /--tag <tag>/);
   assert.match(result.stdout, /--dry-run/);
+  assert.match(result.stdout, /--validate-config/);
   assert.match(result.stdout, /--output-dir <directory>/);
   assert.match(result.stdout, /--no-report/);
   assert.match(result.stdout, /--format <text\|json>/);
@@ -64,5 +65,20 @@ test("builds a request-free execution plan", () => {
     method: "GET",
     url: "https://example.com/status",
     tags: ["production"],
+  });
+});
+
+test("summarizes validated config without making requests", () => {
+  const summary = buildConfigSummary([
+    { name: "Enabled", tags: ["production"] },
+    { name: "Disabled", enabled: false },
+  ], "checks.json");
+
+  assert.deepEqual(summary, {
+    configFile: "checks.json",
+    totalCount: 2,
+    enabledCount: 1,
+    disabledCount: 1,
+    taggedCount: 1,
   });
 });

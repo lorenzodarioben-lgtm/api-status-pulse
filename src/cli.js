@@ -21,6 +21,7 @@ Options:
   --concurrency <count>    Limit simultaneously running endpoint checks
   --tag <tag>              Run checks matching a tag (repeatable)
   --dry-run                Validate and preview selected checks without requests
+  --validate-config        Validate config and exit without requests
   --output-dir <directory> Write reports to a custom directory
   --no-report              Do not write report files
   --format <text|json>     Choose terminal output format
@@ -136,6 +137,24 @@ function printRunPlan(plan) {
   }
 }
 
+function buildConfigSummary(checks, configFile) {
+  const enabledCount = checks.filter((check) => check.enabled !== false).length;
+
+  return {
+    configFile,
+    totalCount: checks.length,
+    enabledCount,
+    disabledCount: checks.length - enabledCount,
+    taggedCount: checks.filter((check) => check.tags?.length > 0).length,
+  };
+}
+
+function printConfigSummary(summary) {
+  console.log(`\nConfig is valid: ${summary.configFile}`);
+  console.log(`Checks: ${summary.totalCount} total, ${summary.enabledCount} enabled, ${summary.disabledCount} disabled`);
+  console.log(`Tagged checks: ${summary.taggedCount}`);
+}
+
 async function runCli(args = process.argv.slice(2)) {
   try {
     if (args.includes("--help")) {
@@ -156,8 +175,23 @@ async function runCli(args = process.argv.slice(2)) {
     const outputFormat = getOutputFormat(args);
     const tags = getTags(args);
     const shouldDryRun = args.includes("--dry-run");
+    const shouldValidateConfig = args.includes("--validate-config");
 
-    const checks = filterChecksByTags(filterEnabledChecks(loadChecks(configFile)), tags);
+    const configuredChecks = loadChecks(configFile);
+
+    if (shouldValidateConfig) {
+      const summary = buildConfigSummary(configuredChecks, configFile);
+
+      if (outputFormat === "json") {
+        console.log(JSON.stringify(summary, null, 2));
+      } else {
+        printConfigSummary(summary);
+      }
+
+      return;
+    }
+
+    const checks = filterChecksByTags(filterEnabledChecks(configuredChecks), tags);
 
     if (checks.length === 0) {
       const selection = tags.length === 0 ? "" : ` matching tags: ${tags.join(", ")}`;
@@ -222,4 +256,6 @@ module.exports = {
   getTags,
   buildRunPlan,
   printRunPlan,
+  buildConfigSummary,
+  printConfigSummary,
 };
