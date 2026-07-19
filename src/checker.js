@@ -14,8 +14,10 @@ async function checkEndpoint(check) {
       return { ...result, attempts };
     }
 
-    if (attempt <= retries) {
+    if (attempt <= retries && shouldRetryResult(result, check)) {
       await sleep(getRetryDelay(check, attempt));
+    } else {
+      break;
     }
   }
 
@@ -103,6 +105,14 @@ async function runSingleAttempt(check, attempt) {
       checkedAt: new Date().toISOString(),
     };
   }
+}
+
+function shouldRetryResult(result, check) {
+  if (result.healthy || check.retryOnStatus === undefined) {
+    return !result.healthy;
+  }
+
+  return typeof result.status !== "number" || check.retryOnStatus.includes(result.status);
 }
 
 function getErrorType(statusOk, latencyOk, headersOk) {
@@ -201,6 +211,7 @@ module.exports = {
   buildRequestHeaders,
   getExpectedHeaderChecks,
   getRetryDelay,
+  shouldRetryResult,
   getErrorType,
   getNetworkErrorType,
   toAttemptSummary,

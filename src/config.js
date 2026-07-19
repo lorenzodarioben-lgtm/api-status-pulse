@@ -76,10 +76,14 @@ function validateCheck(check) {
   validateHeaders(check.headers, "headers", check.name);
   validateHeaders(check.expectedHeaders, "expectedHeaders", check.name);
 
-  for (const status of check.expectedStatus) {
-    if (!Number.isInteger(status) || status < 100 || status > 599) {
-      throw new Error(`Check "${check.name}" has an invalid HTTP status code.`);
+  validateStatusCodes(check.expectedStatus, "expectedStatus", check.name);
+
+  if (check.retryOnStatus !== undefined) {
+    if (!Array.isArray(check.retryOnStatus) || check.retryOnStatus.length === 0) {
+      throw new Error(`Check "${check.name}" must define retryOnStatus as a non-empty array.`);
     }
+
+    validateStatusCodes(check.retryOnStatus, "retryOnStatus", check.name);
   }
 
   if (!Number.isInteger(check.timeoutMs) || check.timeoutMs <= 0) {
@@ -139,6 +143,14 @@ function validateUrl(value, checkName) {
 
   if (url.hash) {
     throw new Error(`Check "${checkName}" URL must not include a fragment.`);
+  }
+}
+
+function validateStatusCodes(statuses, fieldName, checkName) {
+  for (const status of statuses) {
+    if (!Number.isInteger(status) || status < 100 || status > 599) {
+      throw new Error(`Check "${checkName}" has an invalid ${fieldName} HTTP status code.`);
+    }
   }
 }
 
@@ -208,6 +220,7 @@ module.exports = {
   validateChecks,
   validateCheck,
   validateUrl,
+  validateStatusCodes,
   validateHeaders,
   isCheckEnabled,
   filterEnabledChecks,

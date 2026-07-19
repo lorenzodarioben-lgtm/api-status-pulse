@@ -7,6 +7,7 @@ const { checkEndpoint } = require("../src/checker");
 let server;
 let baseUrl;
 let flakyRequestCount = 0;
+let missingRequestCount = 0;
 
 test.before(async () => {
   server = http.createServer((request, response) => {
@@ -47,6 +48,13 @@ test.before(async () => {
 
     if (request.url === "/final") {
       response.writeHead(200);
+      response.end();
+      return;
+    }
+
+    if (request.url === "/missing") {
+      missingRequestCount += 1;
+      response.writeHead(404);
       response.end();
     }
   });
@@ -134,4 +142,21 @@ test("follows or exposes redirects according to check policy", async () => {
   assert.match(followed.finalUrl, /\/final$/);
   assert.equal(manual.status, 302);
   assert.equal(manual.errorType, "unexpected_status");
+});
+
+test("does not retry non-retryable HTTP statuses", async () => {
+  const result = await checkEndpoint({
+    name: "Missing",
+    url: `${baseUrl}/missing`,
+    method: "GET",
+    expectedStatus: [200],
+    timeoutMs: 1000,
+    maxLatencyMs: 1000,
+    retries: 2,
+    retryOnStatus: [503],
+  });
+
+  assert.equal(result.status, 404);
+  assert.equal(result.attempts.length, 1);
+  assert.equal(missingRequestCount, 1);
 });

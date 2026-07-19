@@ -152,3 +152,9 @@ test("validates explicit redirect behavior", () => {
   assert.doesNotThrow(() => validateCheck({ ...validCheck, redirect: "manual" }));
   assert.throws(() => validateCheck({ ...validCheck, redirect: "sometimes" }), /redirect as follow, manual, or error/);
 });
+
+test("validates retryable HTTP statuses", () => {
+  assert.doesNotThrow(() => validateCheck({ ...validCheck, retryOnStatus: [429, 503] }));
+  assert.throws(() => validateCheck({ ...validCheck, retryOnStatus: [] }), /retryOnStatus as a non-empty array/);
+  assert.throws(() => validateCheck({ ...validCheck, retryOnStatus: [700] }), /invalid retryOnStatus HTTP status code/);
+});
