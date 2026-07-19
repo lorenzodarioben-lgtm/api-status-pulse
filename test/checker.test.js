@@ -44,6 +44,7 @@ test("classifies endpoint and network failure causes", () => {
   assert.equal(getErrorType(false, true, true), "unexpected_status");
   assert.equal(getErrorType(true, false, true), "latency_threshold");
   assert.equal(getErrorType(true, true, false), "response_header");
+  assert.equal(getErrorType(true, true, true, false), "response_body");
   assert.equal(getErrorType(true, true, true), null);
   assert.equal(getNetworkErrorType({ name: "AbortError" }), "timeout");
   assert.equal(getNetworkErrorType(new Error("offline")), "network");

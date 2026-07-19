@@ -59,6 +59,10 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" cannot define body for ${check.method} requests.`);
   }
 
+  if (check.expectedBodyIncludes !== undefined && (!check.expectedBodyIncludes || typeof check.expectedBodyIncludes !== "string")) {
+    throw new Error(`Check "${check.name}" must define expectedBodyIncludes as a non-empty string.`);
+  }
+
   if (check.enabled !== undefined && typeof check.enabled !== "boolean") {
     throw new Error(`Check "${check.name}" must define enabled as a boolean.`);
   }

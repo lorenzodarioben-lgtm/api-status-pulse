@@ -158,3 +158,8 @@ test("validates retryable HTTP statuses", () => {
   assert.throws(() => validateCheck({ ...validCheck, retryOnStatus: [] }), /retryOnStatus as a non-empty array/);
   assert.throws(() => validateCheck({ ...validCheck, retryOnStatus: [700] }), /invalid retryOnStatus HTTP status code/);
 });
+
+test("validates response body expectations", () => {
+  assert.doesNotThrow(() => validateCheck({ ...validCheck, expectedBodyIncludes: "ready" }));
+  assert.throws(() => validateCheck({ ...validCheck, expectedBodyIncludes: "" }), /expectedBodyIncludes as a non-empty string/);
+});

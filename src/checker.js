@@ -40,20 +40,21 @@ async function runSingleAttempt(check, attempt) {
       redirect: check.redirect ?? "follow",
     });
 
-    const latencyMs = Date.now() - start;
-    clearTimeout(timeout);
-
     const expectedStatuses = check.expectedStatus ?? [200];
     const statusOk = expectedStatuses.includes(response.status);
     const headerChecks = getExpectedHeaderChecks(response.headers, check.expectedHeaders);
     const headersOk = headerChecks.every((header) => header.matches);
+    const bodyCheck = await getBodyCheck(response, check.expectedBodyIncludes);
+    const bodyOk = bodyCheck?.matches ?? true;
+    const latencyMs = Date.now() - start;
+    clearTimeout(timeout);
     const latencyOk =
       typeof check.maxLatencyMs === "number"
         ? latencyMs <= check.maxLatencyMs
         : true;
 
-    const healthy = statusOk && latencyOk && headersOk;
-    const errorType = getErrorType(statusOk, latencyOk, headersOk);
+    const healthy = statusOk && latencyOk && headersOk && bodyOk;
+    const errorType = getErrorType(statusOk, latencyOk, headersOk, bodyOk);
     const severity = getSeverity({
       healthy,
       statusOk,
@@ -77,9 +78,10 @@ async function runSingleAttempt(check, attempt) {
       attempt,
       healthy,
       severity,
-      reason: getReason(statusOk, latencyOk, headersOk, response.status, latencyMs, check, headerChecks),
+      reason: getReason(statusOk, latencyOk, headersOk, bodyOk, response.status, latencyMs, check, headerChecks, bodyCheck),
       errorType,
       headerChecks,
+      bodyCheck,
       checkedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -102,6 +104,7 @@ async function runSingleAttempt(check, attempt) {
       reason: error.name === "AbortError" ? "Request timed out" : error.message,
       errorType: getNetworkErrorType(error),
       headerChecks: [],
+      bodyCheck: null,
       checkedAt: new Date().toISOString(),
     };
   }
@@ -115,7 +118,20 @@ function shouldRetryResult(result, check) {
   return typeof result.status !== "number" || check.retryOnStatus.includes(result.status);
 }
 
-function getErrorType(statusOk, latencyOk, headersOk) {
+async function getBodyCheck(response, expectedBodyIncludes) {
+  if (expectedBodyIncludes === undefined) {
+    return null;
+  }
+
+  const body = await response.text();
+
+  return {
+    expectedBodyIncludes,
+    matches: body.includes(expectedBodyIncludes),
+  };
+}
+
+function getErrorType(statusOk, latencyOk, headersOk, bodyOk = true) {
   if (!statusOk) {
     return "unexpected_status";
   }
@@ -126,6 +142,10 @@ function getErrorType(statusOk, latencyOk, headersOk) {
 
   if (!headersOk) {
     return "response_header";
+  }
+
+  if (!bodyOk) {
+    return "response_body";
   }
 
   return null;
@@ -149,6 +169,7 @@ function toAttemptSummary(result) {
     severity: result.severity,
     reason: result.reason,
     errorType: result.errorType,
+    bodyCheck: result.bodyCheck,
     checkedAt: result.checkedAt,
   };
 }
@@ -187,7 +208,7 @@ function getExpectedHeaderChecks(responseHeaders, expectedHeaders = {}) {
   });
 }
 
-function getReason(statusOk, latencyOk, headersOk, status, latencyMs, check, headerChecks = []) {
+function getReason(statusOk, latencyOk, headersOk, bodyOk, status, latencyMs, check, headerChecks = [], bodyCheck = null) {
   if (!statusOk) {
     return `Unexpected status code: ${status}`;
   }
@@ -201,6 +222,10 @@ function getReason(statusOk, latencyOk, headersOk, status, latencyMs, check, hea
     return `Unexpected response header ${failedHeader.name}: ${failedHeader.actualValue ?? "missing"}`;
   }
 
+  if (!bodyOk) {
+    return `Response body did not include: ${bodyCheck.expectedBodyIncludes}`;
+  }
+
   return "Healthy";
 }
 
@@ -210,6 +235,7 @@ module.exports = {
   getReason,
   buildRequestHeaders,
   getExpectedHeaderChecks,
+  getBodyCheck,
   getRetryDelay,
   shouldRetryResult,
   getErrorType,

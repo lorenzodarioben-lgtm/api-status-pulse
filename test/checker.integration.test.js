@@ -56,6 +56,12 @@ test.before(async () => {
       missingRequestCount += 1;
       response.writeHead(404);
       response.end();
+      return;
+    }
+
+    if (request.url === "/body") {
+      response.writeHead(200);
+      response.end("service ready");
     }
   });
 
@@ -159,4 +165,24 @@ test("does not retry non-retryable HTTP statuses", async () => {
   assert.equal(result.status, 404);
   assert.equal(result.attempts.length, 1);
   assert.equal(missingRequestCount, 1);
+});
+
+test("validates expected response body content", async () => {
+  const commonCheck = {
+    name: "Body",
+    url: `${baseUrl}/body`,
+    method: "GET",
+    expectedStatus: [200],
+    timeoutMs: 1000,
+    maxLatencyMs: 1000,
+    retries: 0,
+  };
+
+  const matching = await checkEndpoint({ ...commonCheck, expectedBodyIncludes: "ready" });
+  const missing = await checkEndpoint({ ...commonCheck, expectedBodyIncludes: "healthy" });
+
+  assert.equal(matching.healthy, true);
+  assert.equal(matching.bodyCheck.matches, true);
+  assert.equal(missing.healthy, false);
+  assert.equal(missing.errorType, "response_body");
 });
