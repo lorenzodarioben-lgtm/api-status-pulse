@@ -82,6 +82,7 @@ async function runSingleAttempt(check, attempt) {
       severity,
       reason: getReason(statusOk, latencyOk, headersOk, bodyOk, response.status, latencyMs, check, headerChecks, bodyCheck),
       errorType,
+      errorCode: null,
       headerChecks,
       bodyCheck,
       checkedAt: new Date().toISOString(),
@@ -105,6 +106,7 @@ async function runSingleAttempt(check, attempt) {
       severity: "CRITICAL",
       reason: error.name === "AbortError" ? "Request timed out" : error.message,
       errorType: getNetworkErrorType(error),
+      errorCode: getNetworkErrorCode(error),
       headerChecks: [],
       bodyCheck: null,
       checkedAt: new Date().toISOString(),
@@ -210,7 +212,25 @@ function getNetworkErrorType(error) {
     return "timeout";
   }
 
-  return error.message.toLowerCase().includes("redirect") ? "redirect" : "network";
+  const code = getNetworkErrorCode(error);
+
+  if (["ENOTFOUND", "EAI_AGAIN"].includes(code)) {
+    return "dns";
+  }
+
+  if (["ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH", "ENETUNREACH"].includes(code)) {
+    return "connection";
+  }
+
+  if (code?.startsWith("CERT_") || code === "ERR_TLS_CERT_ALTNAME_INVALID") {
+    return "tls";
+  }
+
+  return String(error.message).toLowerCase().includes("redirect") ? "redirect" : "network";
+}
+
+function getNetworkErrorCode(error) {
+  return error.cause?.code ?? error.code ?? null;
 }
 
 function toAttemptSummary(result) {
@@ -223,6 +243,7 @@ function toAttemptSummary(result) {
     severity: result.severity,
     reason: result.reason,
     errorType: result.errorType,
+    errorCode: result.errorCode,
     bodyCheck: result.bodyCheck,
     checkedAt: result.checkedAt,
   };
@@ -299,6 +320,7 @@ module.exports = {
   shouldRetryResult,
   getErrorType,
   getNetworkErrorType,
+  getNetworkErrorCode,
   toAttemptSummary,
   DEFAULT_MAX_RESPONSE_BODY_BYTES,
 };

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getExpectedHeaderChecks, getRetryDelay, readResponseBody, shouldRetryResult, getErrorType, getNetworkErrorType } = require("../src/checker");
+const { getExpectedHeaderChecks, getRetryDelay, readResponseBody, shouldRetryResult, getErrorType, getNetworkErrorType, getNetworkErrorCode } = require("../src/checker");
 
 test("evaluates configured response header expectations", () => {
   const checks = getExpectedHeaderChecks(
@@ -49,6 +49,10 @@ test("classifies endpoint and network failure causes", () => {
   assert.equal(getNetworkErrorType({ name: "AbortError" }), "timeout");
   assert.equal(getNetworkErrorType(new Error("offline")), "network");
   assert.equal(getNetworkErrorType(new Error("redirect mode rejected the response")), "redirect");
+  assert.equal(getNetworkErrorType({ name: "TypeError", cause: { code: "ENOTFOUND" } }), "dns");
+  assert.equal(getNetworkErrorType({ name: "TypeError", cause: { code: "ECONNREFUSED" } }), "connection");
+  assert.equal(getNetworkErrorType({ name: "TypeError", cause: { code: "CERT_HAS_EXPIRED" } }), "tls");
+  assert.equal(getNetworkErrorCode({ cause: { code: "ENOTFOUND" } }), "ENOTFOUND");
 });
 
 test("stops reading inspected response bodies at the configured byte limit", async () => {
