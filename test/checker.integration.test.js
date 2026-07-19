@@ -36,6 +36,18 @@ test.before(async () => {
         response.writeHead(200);
         response.end();
       }, 40);
+      return;
+    }
+
+    if (request.url === "/redirect") {
+      response.writeHead(302, { Location: "/final" });
+      response.end();
+      return;
+    }
+
+    if (request.url === "/final") {
+      response.writeHead(200);
+      response.end();
     }
   });
 
@@ -101,4 +113,25 @@ test("classifies aborted requests as timeouts", async () => {
   assert.equal(result.healthy, false);
   assert.equal(result.errorType, "timeout");
   assert.equal(result.attempts.length, 1);
+});
+
+test("follows or exposes redirects according to check policy", async () => {
+  const commonCheck = {
+    name: "Redirect",
+    url: `${baseUrl}/redirect`,
+    method: "GET",
+    expectedStatus: [200],
+    timeoutMs: 1000,
+    maxLatencyMs: 1000,
+    retries: 0,
+  };
+
+  const followed = await checkEndpoint(commonCheck);
+  const manual = await checkEndpoint({ ...commonCheck, redirect: "manual" });
+
+  assert.equal(followed.healthy, true);
+  assert.equal(followed.redirected, true);
+  assert.match(followed.finalUrl, /\/final$/);
+  assert.equal(manual.status, 302);
+  assert.equal(manual.errorType, "unexpected_status");
 });

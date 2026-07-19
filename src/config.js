@@ -65,6 +65,10 @@ function validateCheck(check) {
 
   validateTags(check.tags, check.name);
 
+  if (check.redirect !== undefined && !["follow", "manual", "error"].includes(check.redirect)) {
+    throw new Error(`Check "${check.name}" must define redirect as follow, manual, or error.`);
+  }
+
   if (!Array.isArray(check.expectedStatus) || check.expectedStatus.length === 0) {
     throw new Error(`Check "${check.name}" must define expectedStatus as a non-empty array.`);
   }

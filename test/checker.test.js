@@ -40,4 +40,5 @@ test("classifies endpoint and network failure causes", () => {
   assert.equal(getErrorType(true, true, true), null);
   assert.equal(getNetworkErrorType({ name: "AbortError" }), "timeout");
   assert.equal(getNetworkErrorType(new Error("offline")), "network");
+  assert.equal(getNetworkErrorType(new Error("redirect mode rejected the response")), "redirect");
 });

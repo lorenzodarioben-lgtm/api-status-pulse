@@ -35,6 +35,7 @@ async function runSingleAttempt(check, attempt) {
       signal: controller.signal,
       headers: buildRequestHeaders(check.headers),
       body: check.body,
+      redirect: check.redirect ?? "follow",
     });
 
     const latencyMs = Date.now() - start;
@@ -66,6 +67,8 @@ async function runSingleAttempt(check, attempt) {
       method: check.method ?? "GET",
       status: response.status,
       statusText: response.statusText,
+      finalUrl: response.url,
+      redirected: response.redirected,
       latencyMs,
       maxLatencyMs: check.maxLatencyMs ?? null,
       warningLatencyRatio: check.warningLatencyRatio ?? 0.8,
@@ -86,6 +89,8 @@ async function runSingleAttempt(check, attempt) {
       method: check.method ?? "GET",
       status: "ERROR",
       statusText: error.name === "AbortError" ? "Timeout" : "Request failed",
+      finalUrl: null,
+      redirected: false,
       latencyMs: null,
       maxLatencyMs: check.maxLatencyMs ?? null,
       warningLatencyRatio: check.warningLatencyRatio ?? 0.8,
@@ -117,7 +122,11 @@ function getErrorType(statusOk, latencyOk, headersOk) {
 }
 
 function getNetworkErrorType(error) {
-  return error.name === "AbortError" ? "timeout" : "network";
+  if (error.name === "AbortError") {
+    return "timeout";
+  }
+
+  return error.message.toLowerCase().includes("redirect") ? "redirect" : "network";
 }
 
 function toAttemptSummary(result) {

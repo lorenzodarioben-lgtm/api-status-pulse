@@ -147,3 +147,8 @@ test("validates tags and filters checks by any requested tag", () => {
 
   assert.deepEqual(filterChecksByTags(checks, ["payments", "staging"]).map((check) => check.name), ["Example API"]);
 });
+
+test("validates explicit redirect behavior", () => {
+  assert.doesNotThrow(() => validateCheck({ ...validCheck, redirect: "manual" }));
+  assert.throws(() => validateCheck({ ...validCheck, redirect: "sometimes" }), /redirect as follow, manual, or error/);
+});
