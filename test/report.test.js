@@ -11,8 +11,11 @@ const {
   buildJsonReport,
   buildMarkdownReport,
   buildCsvReport,
+  escapeCsvValue,
+  escapeMarkdownTableCell,
   buildJUnitReport,
   saveReports,
+  writeFileAtomically,
 } = require("../src/report");
 
 const sampleResults = [
@@ -128,4 +131,27 @@ test("buildCsvReport produces escaped, tabular output", () => {
 
   assert.match(csv, /^name,url,method,status,latencyMs,severity,healthy,attempt,attemptCount,errorType,reason/m);
   assert.match(csv, /"Healthy, stable ""service"""/);
+});
+
+test("neutralizes spreadsheet formulas and markdown table delimiters", () => {
+  assert.equal(escapeCsvValue("=SUM(A1:A2)"), "\"'=SUM(A1:A2)\"");
+  assert.equal(escapeMarkdownTableCell("Payments | ready\nall zones"), "Payments \\| ready<br>all zones");
+
+  const markdown = buildMarkdownReport([
+    { ...sampleResults[0], name: "Payments | API", reason: "Healthy\nall zones" },
+  ]);
+
+  assert.match(markdown, /Payments \\| API/);
+  assert.match(markdown, /Healthy<br>all zones/);
+});
+
+test("writes report files through an atomic replacement", () => {
+  const reportDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "api-status-pulse-"));
+  const reportPath = path.join(reportDirectory, "report.json");
+
+  writeFileAtomically(reportPath, "first");
+  writeFileAtomically(reportPath, "second");
+
+  assert.equal(fs.readFileSync(reportPath, "utf8"), "second");
+  assert.equal(fs.readdirSync(reportDirectory).filter((file) => file.endsWith(".tmp")).length, 0);
 });

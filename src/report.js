@@ -46,10 +46,10 @@ function saveReports(results, reportDirectory = REPORT_DIR) {
   const csvPath = path.join(reportDirectory, "report.csv");
   const junitPath = path.join(reportDirectory, "report.junit.xml");
 
-  fs.writeFileSync(jsonPath, JSON.stringify(buildJsonReport(results, context), null, 2));
-  fs.writeFileSync(markdownPath, buildMarkdownReport(results, context));
-  fs.writeFileSync(csvPath, buildCsvReport(results));
-  fs.writeFileSync(junitPath, buildJUnitReport(results, context));
+  writeFileAtomically(jsonPath, JSON.stringify(buildJsonReport(results, context), null, 2));
+  writeFileAtomically(markdownPath, buildMarkdownReport(results, context));
+  writeFileAtomically(csvPath, buildCsvReport(results));
+  writeFileAtomically(junitPath, buildJUnitReport(results, context));
 
   return { jsonPath, markdownPath, csvPath, junitPath };
 }
@@ -129,7 +129,7 @@ function buildMarkdownReport(results, context = createReportContext(results)) {
       const latency = result.latencyMs === null ? "-" : `${result.latencyMs}ms`;
       const severity = result.severity ?? "UNKNOWN";
 
-      return `| ${result.name} | ${result.status} | ${latency} | ${severity} | ${health} | ${result.reason} |`;
+      return `| ${[result.name, result.status, latency, severity, health, result.reason].map(escapeMarkdownTableCell).join(" | ")} |`;
     })
     .join("\n");
 
@@ -180,8 +180,32 @@ function buildCsvReport(results) {
 }
 
 function escapeCsvValue(value) {
-  const stringValue = value ?? "";
+  const stringValue = neutralizeCsvFormula(value ?? "");
   return `"${String(stringValue).replaceAll('"', '""')}"`;
+}
+
+function neutralizeCsvFormula(value) {
+  const stringValue = String(value);
+  return /^[=+\-@]/.test(stringValue) ? `'${stringValue}` : stringValue;
+}
+
+function escapeMarkdownTableCell(value) {
+  return String(value ?? "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("|", "\\|")
+    .replace(/\r?\n/g, "<br>");
+}
+
+function writeFileAtomically(filePath, content) {
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+
+  try {
+    fs.writeFileSync(temporaryPath, content);
+    fs.renameSync(temporaryPath, filePath);
+  } catch (error) {
+    fs.rmSync(temporaryPath, { force: true });
+    throw error;
+  }
 }
 
 function buildJUnitReport(results, context = createReportContext(results)) {
@@ -248,6 +272,9 @@ module.exports = {
   buildMarkdownReport,
   buildCsvReport,
   escapeCsvValue,
+  neutralizeCsvFormula,
+  escapeMarkdownTableCell,
+  writeFileAtomically,
   buildJUnitReport,
   escapeXml,
   getSeverityIcon,
