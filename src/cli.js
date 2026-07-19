@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const { loadChecks, filterEnabledChecks } = require("./config");
+const { loadChecks, filterEnabledChecks, filterChecksByTags } = require("./config");
 const { checkEndpoint } = require("./checker");
 const { runChecks } = require("./runner");
 const { printResults, saveReports, buildJsonReport } = require("./report");
@@ -19,6 +19,7 @@ Usage:
 Options:
   --config <file>          Use a custom checks config file
   --concurrency <count>    Limit simultaneously running endpoint checks
+  --tag <tag>              Run checks matching a tag (repeatable)
   --output-dir <directory> Write reports to a custom directory
   --no-report              Do not write report files
   --format <text|json>     Choose terminal output format
@@ -43,19 +44,38 @@ function getConfigFile(args) {
 }
 
 function getOptionValue(args, optionName) {
-  const optionIndex = args.indexOf(optionName);
+  const values = getOptionValues(args, optionName);
 
-  if (optionIndex === -1) {
-    return undefined;
+  if (values.length > 1) {
+    throw new Error(`${optionName} can only be provided once.`);
   }
 
-  const value = args[optionIndex + 1];
+  return values[0];
+}
 
-  if (!value || value.startsWith("--")) {
-    throw new Error(`${optionName} requires a value.`);
+function getOptionValues(args, optionName) {
+  const values = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== optionName) {
+      continue;
+    }
+
+    const value = args[index + 1];
+
+    if (!value || value.startsWith("--")) {
+      throw new Error(`${optionName} requires a value.`);
+    }
+
+    values.push(value);
+    index += 1;
   }
 
-  return value;
+  return values;
+}
+
+function getTags(args) {
+  return getOptionValues(args, "--tag");
 }
 
 function getConcurrency(args) {
@@ -106,11 +126,13 @@ async function runCli(args = process.argv.slice(2)) {
     const outputDirectory = getOutputDirectory(args);
     const shouldSkipReports = args.includes("--no-report");
     const outputFormat = getOutputFormat(args);
+    const tags = getTags(args);
 
-    const checks = filterEnabledChecks(loadChecks(configFile));
+    const checks = filterChecksByTags(filterEnabledChecks(loadChecks(configFile)), tags);
 
     if (checks.length === 0) {
-      throw new Error("No enabled endpoint checks were found in the config file.");
+      const selection = tags.length === 0 ? "" : ` matching tags: ${tags.join(", ")}`;
+      throw new Error(`No enabled endpoint checks were found${selection}.`);
     }
 
     const results = await runChecks(checks, checkEndpoint, concurrency);
@@ -152,7 +174,9 @@ module.exports = {
   printVersion,
   getConfigFile,
   getOptionValue,
+  getOptionValues,
   getConcurrency,
   getOutputDirectory,
   getOutputFormat,
+  getTags,
 };

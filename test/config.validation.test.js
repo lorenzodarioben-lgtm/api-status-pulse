@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { loadChecks, validateCheck, filterEnabledChecks } = require("../src/config");
+const { loadChecks, validateCheck, filterEnabledChecks, filterChecksByTags } = require("../src/config");
 
 const validCheck = {
   name: "Example API",
@@ -134,4 +134,16 @@ test("supports explicitly disabled checks", () => {
     filterEnabledChecks([{ ...validCheck }, { ...validCheck, name: "Disabled", enabled: false }]).map((check) => check.name),
     ["Example API"],
   );
+});
+
+test("validates tags and filters checks by any requested tag", () => {
+  assert.doesNotThrow(() => validateCheck({ ...validCheck, tags: ["production", "payments"] }));
+  assert.throws(() => validateCheck({ ...validCheck, tags: ["production", "production"] }), /must not repeat tags/);
+
+  const checks = [
+    { ...validCheck, tags: ["production", "payments"] },
+    { ...validCheck, name: "Search", tags: ["production", "search"] },
+  ];
+
+  assert.deepEqual(filterChecksByTags(checks, ["payments", "staging"]).map((check) => check.name), ["Example API"]);
 });

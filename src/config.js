@@ -63,6 +63,8 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must define enabled as a boolean.`);
   }
 
+  validateTags(check.tags, check.name);
+
   if (!Array.isArray(check.expectedStatus) || check.expectedStatus.length === 0) {
     throw new Error(`Check "${check.name}" must define expectedStatus as a non-empty array.`);
   }
@@ -175,6 +177,28 @@ function filterEnabledChecks(checks) {
   return checks.filter(isCheckEnabled);
 }
 
+function validateTags(tags, checkName) {
+  if (tags === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(tags) || tags.some((tag) => typeof tag !== "string" || !tag.trim() || tag.trim() !== tag)) {
+    throw new Error(`Check "${checkName}" must define tags as an array of non-empty strings.`);
+  }
+
+  if (new Set(tags).size !== tags.length) {
+    throw new Error(`Check "${checkName}" must not repeat tags.`);
+  }
+}
+
+function filterChecksByTags(checks, tags = []) {
+  if (tags.length === 0) {
+    return checks;
+  }
+
+  return checks.filter((check) => check.tags?.some((tag) => tags.includes(tag)));
+}
+
 module.exports = {
   loadChecks,
   validateChecks,
@@ -183,4 +207,6 @@ module.exports = {
   validateHeaders,
   isCheckEnabled,
   filterEnabledChecks,
+  validateTags,
+  filterChecksByTags,
 };

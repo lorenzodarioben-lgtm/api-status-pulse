@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOutputDirectory, getOutputFormat } = require("../src/cli");
+const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -16,6 +16,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /Usage:/);
   assert.match(result.stdout, /--config <file>/);
   assert.match(result.stdout, /--concurrency <count>/);
+  assert.match(result.stdout, /--tag <tag>/);
   assert.match(result.stdout, /--output-dir <directory>/);
   assert.match(result.stdout, /--no-report/);
   assert.match(result.stdout, /--format <text\|json>/);
@@ -41,4 +42,10 @@ test("parses report output options and rejects missing values", () => {
   assert.equal(getOutputDirectory(["--output-dir", "artifacts"]), "artifacts");
   assert.equal(getOptionValue([], "--config"), undefined);
   assert.throws(() => getOptionValue(["--config"], "--config"), /requires a value/);
+});
+
+test("parses repeatable tag filters without allowing duplicated single options", () => {
+  assert.deepEqual(getTags(["--tag", "production", "--tag", "payments"]), ["production", "payments"]);
+  assert.deepEqual(getOptionValues(["--tag", "production"], "--tag"), ["production"]);
+  assert.throws(() => getOptionValue(["--config", "a.json", "--config", "b.json"], "--config"), /can only be provided once/);
 });
