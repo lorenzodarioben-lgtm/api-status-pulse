@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const { loadChecks, filterEnabledChecks, filterChecksByTags } = require("./config");
+const { loadChecks, filterEnabledChecks, filterChecksByTags, filterChecksByNames } = require("./config");
 const { checkEndpoint } = require("./checker");
 const { runChecks } = require("./runner");
 const { printResults, saveReports, buildJsonReport } = require("./report");
@@ -20,6 +20,7 @@ Options:
   --config <file>          Use a custom checks config file
   --concurrency <count>    Limit simultaneously running endpoint checks
   --tag <tag>              Run checks matching a tag (repeatable)
+  --name <name>            Run checks matching an exact name (repeatable)
   --dry-run                Validate and preview selected checks without requests
   --validate-config        Validate config and exit without requests
   --output-dir <directory> Write reports to a custom directory
@@ -82,6 +83,10 @@ function getTags(args) {
   return getOptionValues(args, "--tag");
 }
 
+function getNames(args) {
+  return getOptionValues(args, "--name");
+}
+
 function getConcurrency(args) {
   const rawValue = getOptionValue(args, "--concurrency");
 
@@ -128,11 +133,12 @@ function getOutputFormat(args) {
   return format;
 }
 
-function buildRunPlan(checks, { configFile, tags, concurrency }) {
+function buildRunPlan(checks, { configFile, tags, names, concurrency }) {
   return {
     configFile,
     selectedCount: checks.length,
     tags,
+    names,
     concurrency: concurrency ?? checks.length,
     checks: checks.map((check) => ({
       name: check.name,
@@ -210,6 +216,7 @@ async function runCli(args = process.argv.slice(2)) {
     const shouldSkipReports = args.includes("--no-report");
     const outputFormat = getOutputFormat(args);
     const tags = getTags(args);
+    const names = getNames(args);
     const shouldDryRun = args.includes("--dry-run");
     const shouldValidateConfig = args.includes("--validate-config");
 
@@ -227,15 +234,25 @@ async function runCli(args = process.argv.slice(2)) {
       return;
     }
 
-    const checks = filterChecksByTags(filterEnabledChecks(configuredChecks), tags);
+    const checks = filterChecksByNames(filterChecksByTags(filterEnabledChecks(configuredChecks), tags), names);
 
     if (checks.length === 0) {
-      const selection = tags.length === 0 ? "" : ` matching tags: ${tags.join(", ")}`;
+      const filters = [];
+
+      if (tags.length > 0) {
+        filters.push(`tags: ${tags.join(", ")}`);
+      }
+
+      if (names.length > 0) {
+        filters.push(`names: ${names.join(", ")}`);
+      }
+
+      const selection = filters.length === 0 ? "" : ` matching ${filters.join("; ")}`;
       throw new Error(`No enabled endpoint checks were found${selection}.`);
     }
 
     if (shouldDryRun) {
-      const plan = buildRunPlan(checks, { configFile, tags, concurrency });
+      const plan = buildRunPlan(checks, { configFile, tags, names, concurrency });
 
       if (outputFormat === "json") {
         console.log(JSON.stringify(plan, null, 2));
@@ -287,6 +304,7 @@ module.exports = {
   getMaxUnhealthy,
   getOutputFormat,
   getTags,
+  getNames,
   buildRunPlan,
   printRunPlan,
   buildConfigSummary,

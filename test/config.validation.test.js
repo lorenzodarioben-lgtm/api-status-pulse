@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { loadChecks, validateCheck, filterEnabledChecks, filterChecksByTags } = require("../src/config");
+const { loadChecks, validateCheck, filterEnabledChecks, filterChecksByTags, filterChecksByNames } = require("../src/config");
 
 const validCheck = {
   name: "Example API",
@@ -146,6 +146,16 @@ test("validates tags and filters checks by any requested tag", () => {
   ];
 
   assert.deepEqual(filterChecksByTags(checks, ["payments", "staging"]).map((check) => check.name), ["Example API"]);
+});
+
+test("filters checks by exact names", () => {
+  const checks = [
+    { ...validCheck },
+    { ...validCheck, name: "Search" },
+  ];
+
+  assert.deepEqual(filterChecksByNames(checks, ["Search"]).map((check) => check.name), ["Search"]);
+  assert.deepEqual(filterChecksByNames(checks).map((check) => check.name), ["Example API", "Search"]);
 });
 
 test("validates explicit redirect behavior", () => {

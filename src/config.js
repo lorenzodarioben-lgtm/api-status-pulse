@@ -228,6 +228,14 @@ function filterChecksByTags(checks, tags = []) {
   return checks.filter((check) => check.tags?.some((tag) => tags.includes(tag)));
 }
 
+function filterChecksByNames(checks, names = []) {
+  if (names.length === 0) {
+    return checks;
+  }
+
+  return checks.filter((check) => names.includes(check.name));
+}
+
 module.exports = {
   loadChecks,
   validateChecks,
@@ -239,4 +247,5 @@ module.exports = {
   filterEnabledChecks,
   validateTags,
   filterChecksByTags,
+  filterChecksByNames,
 };

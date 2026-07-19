@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOptionValues, getOutputDirectory, getMaxUnhealthy, getOutputFormat, getTags, buildRunPlan, buildConfigSummary, getExitCode } = require("../src/cli");
+const { getOptionValue, getOptionValues, getOutputDirectory, getMaxUnhealthy, getOutputFormat, getTags, getNames, buildRunPlan, buildConfigSummary, getExitCode } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -17,6 +17,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /--config <file>/);
   assert.match(result.stdout, /--concurrency <count>/);
   assert.match(result.stdout, /--tag <tag>/);
+  assert.match(result.stdout, /--name <name>/);
   assert.match(result.stdout, /--dry-run/);
   assert.match(result.stdout, /--validate-config/);
   assert.match(result.stdout, /--fail-on-warning/);
@@ -54,14 +55,19 @@ test("parses repeatable tag filters without allowing duplicated single options",
   assert.throws(() => getOptionValue(["--config", "a.json", "--config", "b.json"], "--config"), /can only be provided once/);
 });
 
+test("parses repeatable exact-name filters", () => {
+  assert.deepEqual(getNames(["--name", "GitHub API", "--name", "NPM Registry"]), ["GitHub API", "NPM Registry"]);
+});
+
 test("builds a request-free execution plan", () => {
   const plan = buildRunPlan(
     [{ name: "Status", method: "GET", url: "https://example.com/status", tags: ["production"] }],
-    { configFile: "checks.json", tags: ["production"], concurrency: undefined },
+    { configFile: "checks.json", tags: ["production"], names: ["Status"], concurrency: undefined },
   );
 
   assert.equal(plan.selectedCount, 1);
   assert.equal(plan.concurrency, 1);
+  assert.deepEqual(plan.names, ["Status"]);
   assert.deepEqual(plan.checks[0], {
     name: "Status",
     method: "GET",
