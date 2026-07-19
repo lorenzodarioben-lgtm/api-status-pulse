@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { getExpectedHeaderChecks, getRetryDelay, shouldRetryResult, getErrorType, getNetworkErrorType } = require("../src/checker");
+const { getExpectedHeaderChecks, getRetryDelay, readResponseBody, shouldRetryResult, getErrorType, getNetworkErrorType } = require("../src/checker");
 
 test("evaluates configured response header expectations", () => {
   const checks = getExpectedHeaderChecks(
@@ -44,9 +44,16 @@ test("classifies endpoint and network failure causes", () => {
   assert.equal(getErrorType(false, true, true), "unexpected_status");
   assert.equal(getErrorType(true, false, true), "latency_threshold");
   assert.equal(getErrorType(true, true, false), "response_header");
-  assert.equal(getErrorType(true, true, true, false), "response_body");
+  assert.equal(getErrorType(true, true, true, { matches: false, tooLarge: false }), "response_body");
   assert.equal(getErrorType(true, true, true), null);
   assert.equal(getNetworkErrorType({ name: "AbortError" }), "timeout");
   assert.equal(getNetworkErrorType(new Error("offline")), "network");
   assert.equal(getNetworkErrorType(new Error("redirect mode rejected the response")), "redirect");
+});
+
+test("stops reading inspected response bodies at the configured byte limit", async () => {
+  const response = new Response("abcdefgh", { headers: { "content-length": "8" } });
+  const result = await readResponseBody(response, 4);
+
+  assert.deepEqual(result, { text: "", sizeBytes: 8, tooLarge: true });
 });

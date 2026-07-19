@@ -1,5 +1,7 @@
 const { getSeverity } = require("./severity");
 
+const DEFAULT_MAX_RESPONSE_BODY_BYTES = 65536;
+
 async function checkEndpoint(check) {
   const retries = check.retries ?? 0;
   let lastResult = null;
@@ -44,7 +46,7 @@ async function runSingleAttempt(check, attempt) {
     const statusOk = expectedStatuses.includes(response.status);
     const headerChecks = getExpectedHeaderChecks(response.headers, check.expectedHeaders);
     const headersOk = headerChecks.every((header) => header.matches);
-    const bodyCheck = await getBodyCheck(response, check.expectedBodyIncludes);
+    const bodyCheck = await getBodyCheck(response, check.expectedBodyIncludes, check.maxResponseBodyBytes);
     const bodyOk = bodyCheck?.matches ?? true;
     const latencyMs = Date.now() - start;
     clearTimeout(timeout);
@@ -54,7 +56,7 @@ async function runSingleAttempt(check, attempt) {
         : true;
 
     const healthy = statusOk && latencyOk && headersOk && bodyOk;
-    const errorType = getErrorType(statusOk, latencyOk, headersOk, bodyOk);
+    const errorType = getErrorType(statusOk, latencyOk, headersOk, bodyCheck);
     const severity = getSeverity({
       healthy,
       statusOk,
@@ -118,20 +120,72 @@ function shouldRetryResult(result, check) {
   return typeof result.status !== "number" || check.retryOnStatus.includes(result.status);
 }
 
-async function getBodyCheck(response, expectedBodyIncludes) {
+async function getBodyCheck(response, expectedBodyIncludes, maxResponseBodyBytes = DEFAULT_MAX_RESPONSE_BODY_BYTES) {
   if (expectedBodyIncludes === undefined) {
     return null;
   }
 
-  const body = await response.text();
+  const body = await readResponseBody(response, maxResponseBodyBytes);
 
   return {
     expectedBodyIncludes,
-    matches: body.includes(expectedBodyIncludes),
+    maxResponseBodyBytes,
+    sizeBytes: body.sizeBytes,
+    tooLarge: body.tooLarge,
+    matches: !body.tooLarge && body.text.includes(expectedBodyIncludes),
   };
 }
 
-function getErrorType(statusOk, latencyOk, headersOk, bodyOk = true) {
+async function readResponseBody(response, maxBytes) {
+  const declaredLength = Number(response.headers.get("content-length"));
+
+  if (Number.isInteger(declaredLength) && declaredLength > maxBytes) {
+    await response.body?.cancel();
+    return { text: "", sizeBytes: declaredLength, tooLarge: true };
+  }
+
+  const reader = response.body?.getReader();
+
+  if (!reader) {
+    return { text: "", sizeBytes: 0, tooLarge: false };
+  }
+
+  const chunks = [];
+  let sizeBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      sizeBytes += value.byteLength;
+
+      if (sizeBytes > maxBytes) {
+        await reader.cancel();
+        return { text: "", sizeBytes, tooLarge: true };
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(sizeBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return { text: new TextDecoder().decode(bytes), sizeBytes, tooLarge: false };
+}
+
+function getErrorType(statusOk, latencyOk, headersOk, bodyCheck = null) {
   if (!statusOk) {
     return "unexpected_status";
   }
@@ -144,8 +198,8 @@ function getErrorType(statusOk, latencyOk, headersOk, bodyOk = true) {
     return "response_header";
   }
 
-  if (!bodyOk) {
-    return "response_body";
+  if (bodyCheck && !bodyCheck.matches) {
+    return bodyCheck.tooLarge ? "response_body_too_large" : "response_body";
   }
 
   return null;
@@ -223,6 +277,10 @@ function getReason(statusOk, latencyOk, headersOk, bodyOk, status, latencyMs, ch
   }
 
   if (!bodyOk) {
+    if (bodyCheck.tooLarge) {
+      return `Response body exceeded limit of ${bodyCheck.maxResponseBodyBytes} bytes`;
+    }
+
     return `Response body did not include: ${bodyCheck.expectedBodyIncludes}`;
   }
 
@@ -236,9 +294,11 @@ module.exports = {
   buildRequestHeaders,
   getExpectedHeaderChecks,
   getBodyCheck,
+  readResponseBody,
   getRetryDelay,
   shouldRetryResult,
   getErrorType,
   getNetworkErrorType,
   toAttemptSummary,
+  DEFAULT_MAX_RESPONSE_BODY_BYTES,
 };

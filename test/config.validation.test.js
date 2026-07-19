@@ -163,3 +163,8 @@ test("validates response body expectations", () => {
   assert.doesNotThrow(() => validateCheck({ ...validCheck, expectedBodyIncludes: "ready" }));
   assert.throws(() => validateCheck({ ...validCheck, expectedBodyIncludes: "" }), /expectedBodyIncludes as a non-empty string/);
 });
+
+test("bounds inspected response bodies", () => {
+  assert.doesNotThrow(() => validateCheck({ ...validCheck, maxResponseBodyBytes: 1024 }));
+  assert.throws(() => validateCheck({ ...validCheck, maxResponseBodyBytes: 0 }), /maxResponseBodyBytes between 1 and 1048576/);
+});

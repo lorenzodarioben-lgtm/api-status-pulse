@@ -62,6 +62,12 @@ test.before(async () => {
     if (request.url === "/body") {
       response.writeHead(200);
       response.end("service ready");
+      return;
+    }
+
+    if (request.url === "/large") {
+      response.writeHead(200);
+      response.end("x".repeat(64));
     }
   });
 
@@ -185,4 +191,22 @@ test("validates expected response body content", async () => {
   assert.equal(matching.bodyCheck.matches, true);
   assert.equal(missing.healthy, false);
   assert.equal(missing.errorType, "response_body");
+});
+
+test("limits body inspection to the configured byte budget", async () => {
+  const result = await checkEndpoint({
+    name: "Large response",
+    url: `${baseUrl}/large`,
+    method: "GET",
+    expectedStatus: [200],
+    expectedBodyIncludes: "x",
+    maxResponseBodyBytes: 8,
+    timeoutMs: 1000,
+    maxLatencyMs: 1000,
+    retries: 0,
+  });
+
+  assert.equal(result.healthy, false);
+  assert.equal(result.errorType, "response_body_too_large");
+  assert.equal(result.bodyCheck.tooLarge, true);
 });

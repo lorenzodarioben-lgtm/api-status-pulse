@@ -63,6 +63,15 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must define expectedBodyIncludes as a non-empty string.`);
   }
 
+  if (
+    check.maxResponseBodyBytes !== undefined &&
+    (!Number.isInteger(check.maxResponseBodyBytes) ||
+      check.maxResponseBodyBytes <= 0 ||
+      check.maxResponseBodyBytes > 1048576)
+  ) {
+    throw new Error(`Check "${check.name}" must define maxResponseBodyBytes between 1 and 1048576.`);
+  }
+
   if (check.enabled !== undefined && typeof check.enabled !== "boolean") {
     throw new Error(`Check "${check.name}" must define enabled as a boolean.`);
   }
