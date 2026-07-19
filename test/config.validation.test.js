@@ -1,7 +1,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { validateCheck } = require("../src/config");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+const { loadChecks, validateCheck } = require("../src/config");
 
 const validCheck = {
   name: "Example API",
@@ -90,4 +94,34 @@ test("validates bounded retry delay settings", () => {
     () => validateCheck({ ...validCheck, retryDelayMs: -1 }),
     /retryDelayMs between 0 and 60000/,
   );
+});
+
+test("rejects malformed, credentialed, and fragment URLs", () => {
+  assert.throws(
+    () => validateCheck({ ...validCheck, url: "https://" }),
+    /valid HTTPS URL/,
+  );
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, url: "https://user:secret@example.com" }),
+    /must not include credentials/,
+  );
+
+  assert.throws(
+    () => validateCheck({ ...validCheck, url: "https://example.com/health#section" }),
+    /must not include a fragment/,
+  );
+});
+
+test("requires finite integer timing and retry values", () => {
+  assert.throws(() => validateCheck({ ...validCheck, timeoutMs: 1.5 }), /positive timeoutMs/);
+  assert.throws(() => validateCheck({ ...validCheck, maxLatencyMs: Infinity }), /positive maxLatencyMs/);
+  assert.throws(() => validateCheck({ ...validCheck, retries: 0.5 }), /retries as zero or more/);
+});
+
+test("adds the source path to invalid JSON errors", () => {
+  const configPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "api-status-pulse-")), "checks.json");
+  fs.writeFileSync(configPath, "{");
+
+  assert.throws(() => loadChecks(configPath), new RegExp(`invalid JSON: ${configPath.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}`));
 });

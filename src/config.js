@@ -6,7 +6,13 @@ function loadChecks(filePath) {
   }
 
   const raw = fs.readFileSync(filePath, "utf8");
-  const checks = JSON.parse(raw);
+  let checks;
+
+  try {
+    checks = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Config file contains invalid JSON: ${filePath}`);
+  }
 
   if (!Array.isArray(checks)) {
     throw new Error("Config file must contain an array of checks.");
@@ -27,7 +33,7 @@ function validateChecks(checks) {
 }
 
 function validateCheck(check) {
-  if (!check.name || typeof check.name !== "string") {
+  if (!check.name || typeof check.name !== "string" || check.name.trim() !== check.name) {
     throw new Error("Each check must have a non-empty name.");
   }
 
@@ -35,9 +41,7 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" must have a URL.`);
   }
 
-  if (!check.url.startsWith("https://")) {
-    throw new Error(`Check "${check.name}" must use an HTTPS URL.`);
-  }
+  validateUrl(check.url, check.name);
 
   if (!check.method || typeof check.method !== "string") {
     throw new Error(`Check "${check.name}" must define an HTTP method.`);
@@ -63,29 +67,29 @@ function validateCheck(check) {
   validateHeaders(check.expectedHeaders, "expectedHeaders", check.name);
 
   for (const status of check.expectedStatus) {
-    if (typeof status !== "number" || status < 100 || status > 599) {
+    if (!Number.isInteger(status) || status < 100 || status > 599) {
       throw new Error(`Check "${check.name}" has an invalid HTTP status code.`);
     }
   }
 
-  if (typeof check.timeoutMs !== "number" || check.timeoutMs <= 0) {
+  if (!Number.isInteger(check.timeoutMs) || check.timeoutMs <= 0) {
     throw new Error(`Check "${check.name}" must define a positive timeoutMs value.`);
   }
 
-  if (typeof check.maxLatencyMs !== "number" || check.maxLatencyMs <= 0) {
+  if (!Number.isInteger(check.maxLatencyMs) || check.maxLatencyMs <= 0) {
     throw new Error(`Check "${check.name}" must define a positive maxLatencyMs value.`);
   }
 
   if (
     check.warningLatencyRatio !== undefined &&
-    (typeof check.warningLatencyRatio !== "number" ||
+    (!Number.isFinite(check.warningLatencyRatio) ||
       check.warningLatencyRatio <= 0 ||
       check.warningLatencyRatio > 1)
   ) {
     throw new Error(`Check "${check.name}" must define warningLatencyRatio between 0 (exclusive) and 1.`);
   }
 
-  if (typeof check.retries !== "number" || check.retries < 0) {
+  if (!Number.isInteger(check.retries) || check.retries < 0) {
     throw new Error(`Check "${check.name}" must define retries as zero or more.`);
   }
 
@@ -98,11 +102,33 @@ function validateCheck(check) {
 
   if (
     check.retryBackoffMultiplier !== undefined &&
-    (typeof check.retryBackoffMultiplier !== "number" ||
+    (!Number.isFinite(check.retryBackoffMultiplier) ||
       check.retryBackoffMultiplier < 1 ||
       check.retryBackoffMultiplier > 10)
   ) {
     throw new Error(`Check "${check.name}" must define retryBackoffMultiplier between 1 and 10.`);
+  }
+}
+
+function validateUrl(value, checkName) {
+  let url;
+
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new Error(`Check "${checkName}" must define a valid HTTPS URL.`);
+  }
+
+  if (url.protocol !== "https:") {
+    throw new Error(`Check "${checkName}" must use an HTTPS URL.`);
+  }
+
+  if (url.username || url.password) {
+    throw new Error(`Check "${checkName}" URL must not include credentials.`);
+  }
+
+  if (url.hash) {
+    throw new Error(`Check "${checkName}" URL must not include a fragment.`);
   }
 }
 
@@ -117,6 +143,12 @@ function validateHeaders(headers, fieldName, checkName) {
 
   for (const [headerName, headerValue] of Object.entries(headers)) {
     if (!headerName.trim() || typeof headerValue !== "string") {
+      throw new Error(`Check "${checkName}" has an invalid ${fieldName} entry.`);
+    }
+
+    try {
+      new Headers([[headerName, headerValue]]);
+    } catch (error) {
       throw new Error(`Check "${checkName}" has an invalid ${fieldName} entry.`);
     }
   }
@@ -135,5 +167,6 @@ module.exports = {
   loadChecks,
   validateChecks,
   validateCheck,
+  validateUrl,
   validateHeaders,
 };
