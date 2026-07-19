@@ -32,6 +32,7 @@ function printResults(results) {
   console.log(`Summary: ${summary.healthyCount}/${summary.totalCount} healthy`);
   console.log(`Severity: ${summary.okCount} OK, ${summary.warningCount} WARNING, ${summary.criticalCount} CRITICAL`);
   console.log(`Average latency: ${summary.averageLatencyMs === null ? "-" : `${summary.averageLatencyMs}ms`}`);
+  console.log(`Latency percentiles: p50 ${formatLatency(summary.p50LatencyMs)}, p95 ${formatLatency(summary.p95LatencyMs)}`);
   console.log(`Overall status: ${summary.overallStatus}\n`);
 }
 
@@ -64,6 +65,7 @@ function buildSummary(results) {
 
   const averageLatencyMs =
     measuredResults.length === 0 ? null : Math.round(totalLatency / measuredResults.length);
+  const latencies = measuredResults.map((result) => result.latencyMs);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -74,8 +76,34 @@ function buildSummary(results) {
     warningCount,
     criticalCount,
     averageLatencyMs,
+    minLatencyMs: calculatePercentile(latencies, 0),
+    p50LatencyMs: calculatePercentile(latencies, 50),
+    p95LatencyMs: calculatePercentile(latencies, 95),
+    maxLatencyMs: calculatePercentile(latencies, 100),
     overallStatus: criticalCount === 0 ? "HEALTHY" : "DEGRADED",
   };
+}
+
+function calculatePercentile(values, percentile) {
+  if (!Number.isFinite(percentile) || percentile < 0 || percentile > 100) {
+    throw new Error("Percentile must be between 0 and 100.");
+  }
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  const sortedValues = [...values].sort((left, right) => left - right);
+  const position = (sortedValues.length - 1) * (percentile / 100);
+  const lowerIndex = Math.floor(position);
+  const upperIndex = Math.ceil(position);
+  const interpolation = position - lowerIndex;
+
+  return Math.round(sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * interpolation);
+}
+
+function formatLatency(latencyMs) {
+  return latencyMs === null ? "-" : `${latencyMs}ms`;
 }
 
 function buildJsonReport(results) {
@@ -112,6 +140,8 @@ Healthy endpoints: **${summary.healthyCount}/${summary.totalCount}**
 Severity breakdown: **${summary.okCount} OK**, **${summary.warningCount} WARNING**, **${summary.criticalCount} CRITICAL**
 
 Average latency: **${averageLatency}**
+
+Latency percentiles: **p50 ${formatLatency(summary.p50LatencyMs)}**, **p95 ${formatLatency(summary.p95LatencyMs)}**
 
 | Endpoint | Status Code | Latency | Severity | Health | Reason |
 |---|---:|---:|---|---|---|
@@ -204,6 +234,8 @@ module.exports = {
   printResults,
   saveReports,
   buildSummary,
+  calculatePercentile,
+  formatLatency,
   buildJsonReport,
   buildMarkdownReport,
   buildCsvReport,

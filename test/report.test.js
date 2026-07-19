@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const {
   buildSummary,
+  calculatePercentile,
   buildJsonReport,
   buildMarkdownReport,
   buildCsvReport,
@@ -53,6 +54,10 @@ test("buildSummary returns health counts and average latency", () => {
   assert.equal(summary.warningCount, 1);
   assert.equal(summary.criticalCount, 1);
   assert.equal(summary.averageLatencyMs, 475);
+  assert.equal(summary.minLatencyMs, 100);
+  assert.equal(summary.p50LatencyMs, 475);
+  assert.equal(summary.p95LatencyMs, 813);
+  assert.equal(summary.maxLatencyMs, 850);
   assert.equal(summary.overallStatus, "DEGRADED");
 });
 
@@ -73,7 +78,15 @@ test("buildMarkdownReport includes severity summary", () => {
   assert.match(markdown, /Healthy endpoints: \*\*2\/3\*\*/);
   assert.match(markdown, /Severity breakdown:/);
   assert.match(markdown, /Average latency: \*\*475ms\*\*/);
+  assert.match(markdown, /Latency percentiles: \*\*p50 475ms\*\*, \*\*p95 813ms\*\*/);
   assert.match(markdown, /\| Endpoint \| Status Code \| Latency \| Severity \| Health \| Reason \|/);
+});
+
+test("calculatePercentile handles interpolation and empty samples", () => {
+  assert.equal(calculatePercentile([100, 200, 300], 50), 200);
+  assert.equal(calculatePercentile([100, 200], 95), 195);
+  assert.equal(calculatePercentile([], 50), null);
+  assert.throws(() => calculatePercentile([100], 101), /between 0 and 100/);
 });
 
 test("saveReports writes to a caller-provided directory", () => {
