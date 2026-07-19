@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const {
   buildSummary,
+  createReportContext,
   calculatePercentile,
   buildJsonReport,
   buildMarkdownReport,
@@ -62,8 +63,10 @@ test("buildSummary returns health counts and average latency", () => {
 });
 
 test("buildJsonReport returns summary and checks", () => {
-  const report = buildJsonReport(sampleResults);
+  const report = buildJsonReport(sampleResults, createReportContext(sampleResults, "2026-01-01T00:00:00.000Z"));
 
+  assert.equal(report.schemaVersion, 1);
+  assert.equal(report.summary.generatedAt, "2026-01-01T00:00:00.000Z");
   assert.equal(report.summary.totalCount, 3);
   assert.equal(report.summary.warningCount, 1);
   assert.equal(report.summary.criticalCount, 1);
@@ -101,6 +104,13 @@ test("saveReports writes to a caller-provided directory", () => {
   assert.ok(fs.existsSync(paths.markdownPath));
   assert.ok(fs.existsSync(paths.csvPath));
   assert.ok(fs.existsSync(paths.junitPath));
+
+  const jsonReport = JSON.parse(fs.readFileSync(paths.jsonPath, "utf8"));
+  const markdownReport = fs.readFileSync(paths.markdownPath, "utf8");
+  const junitReport = fs.readFileSync(paths.junitPath, "utf8");
+
+  assert.match(markdownReport, new RegExp(`Generated at: ${jsonReport.summary.generatedAt}`));
+  assert.match(junitReport, new RegExp(`timestamp="${jsonReport.summary.generatedAt}"`));
 });
 
 test("buildJUnitReport describes successful and failed checks", () => {

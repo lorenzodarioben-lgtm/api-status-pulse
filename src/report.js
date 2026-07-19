@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const REPORT_DIR = "reports";
+const REPORT_SCHEMA_VERSION = 1;
 
 function printResults(results) {
   console.log("\nAPI Status Pulse");
@@ -38,21 +39,22 @@ function printResults(results) {
 
 function saveReports(results, reportDirectory = REPORT_DIR) {
   fs.mkdirSync(reportDirectory, { recursive: true });
+  const context = createReportContext(results);
 
   const jsonPath = path.join(reportDirectory, "report.json");
   const markdownPath = path.join(reportDirectory, "report.md");
   const csvPath = path.join(reportDirectory, "report.csv");
   const junitPath = path.join(reportDirectory, "report.junit.xml");
 
-  fs.writeFileSync(jsonPath, JSON.stringify(buildJsonReport(results), null, 2));
-  fs.writeFileSync(markdownPath, buildMarkdownReport(results));
+  fs.writeFileSync(jsonPath, JSON.stringify(buildJsonReport(results, context), null, 2));
+  fs.writeFileSync(markdownPath, buildMarkdownReport(results, context));
   fs.writeFileSync(csvPath, buildCsvReport(results));
-  fs.writeFileSync(junitPath, buildJUnitReport(results));
+  fs.writeFileSync(junitPath, buildJUnitReport(results, context));
 
   return { jsonPath, markdownPath, csvPath, junitPath };
 }
 
-function buildSummary(results) {
+function buildSummary(results, generatedAt = new Date().toISOString()) {
   const healthyCount = results.filter((result) => result.healthy).length;
   const unhealthyCount = results.length - healthyCount;
 
@@ -68,7 +70,7 @@ function buildSummary(results) {
   const latencies = measuredResults.map((result) => result.latencyMs);
 
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     totalCount: results.length,
     healthyCount,
     unhealthyCount,
@@ -106,15 +108,20 @@ function formatLatency(latencyMs) {
   return latencyMs === null ? "-" : `${latencyMs}ms`;
 }
 
-function buildJsonReport(results) {
+function createReportContext(results, generatedAt = new Date().toISOString()) {
+  return { summary: buildSummary(results, generatedAt) };
+}
+
+function buildJsonReport(results, context = createReportContext(results)) {
   return {
-    summary: buildSummary(results),
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    summary: context.summary,
     checks: results,
   };
 }
 
-function buildMarkdownReport(results) {
-  const summary = buildSummary(results);
+function buildMarkdownReport(results, context = createReportContext(results)) {
+  const summary = context.summary;
 
   const rows = results
     .map((result) => {
@@ -177,8 +184,8 @@ function escapeCsvValue(value) {
   return `"${String(stringValue).replaceAll('"', '""')}"`;
 }
 
-function buildJUnitReport(results) {
-  const summary = buildSummary(results);
+function buildJUnitReport(results, context = createReportContext(results)) {
+  const summary = context.summary;
   const testCases = results
     .map((result) => {
       const durationSeconds = typeof result.latencyMs === "number" ? result.latencyMs / 1000 : 0;
@@ -234,6 +241,7 @@ module.exports = {
   printResults,
   saveReports,
   buildSummary,
+  createReportContext,
   calculatePercentile,
   formatLatency,
   buildJsonReport,
@@ -243,4 +251,5 @@ module.exports = {
   buildJUnitReport,
   escapeXml,
   getSeverityIcon,
+  REPORT_SCHEMA_VERSION,
 };
