@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-const { getOptionValue, getOptionValues, getOutputDirectory, getOutputFormat, getTags, buildRunPlan, buildConfigSummary, getExitCode } = require("../src/cli");
+const { getOptionValue, getOptionValues, getOutputDirectory, getMaxUnhealthy, getOutputFormat, getTags, buildRunPlan, buildConfigSummary, getExitCode } = require("../src/cli");
 
 test("--help prints CLI usage", () => {
   const result = spawnSync(process.execPath, ["index.js", "--help"], {
@@ -20,6 +20,7 @@ test("--help prints CLI usage", () => {
   assert.match(result.stdout, /--dry-run/);
   assert.match(result.stdout, /--validate-config/);
   assert.match(result.stdout, /--fail-on-warning/);
+  assert.match(result.stdout, /--max-unhealthy <count>/);
   assert.match(result.stdout, /--output-dir <directory>/);
   assert.match(result.stdout, /--no-report/);
   assert.match(result.stdout, /--format <text\|json>/);
@@ -91,4 +92,13 @@ test("can treat warnings as CI failures", () => {
   assert.equal(getExitCode([healthyWarning], { shouldFailOnUnhealthy: true, shouldFailOnWarning: false }), 0);
   assert.equal(getExitCode([healthyWarning], { shouldFailOnUnhealthy: false, shouldFailOnWarning: true }), 1);
   assert.equal(getExitCode([unhealthy], { shouldFailOnUnhealthy: true, shouldFailOnWarning: false }), 1);
+});
+
+test("supports an unhealthy-check budget", () => {
+  const unhealthy = { healthy: false, severity: "CRITICAL" };
+
+  assert.equal(getMaxUnhealthy(["--max-unhealthy", "1"]), 1);
+  assert.throws(() => getMaxUnhealthy(["--max-unhealthy", "-1"]), /non-negative integer/);
+  assert.equal(getExitCode([unhealthy], { maxUnhealthy: 1 }), 0);
+  assert.equal(getExitCode([unhealthy, unhealthy], { maxUnhealthy: 1 }), 1);
 });

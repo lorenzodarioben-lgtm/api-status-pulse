@@ -27,6 +27,7 @@ Options:
   --format <text|json>     Choose terminal output format
   --fail-on-unhealthy      Exit with code 1 if any endpoint is unhealthy
   --fail-on-warning        Exit with code 1 for warnings or critical results
+  --max-unhealthy <count>  Permit up to this many unhealthy checks
   --version                Print the current version
   --help                   Show this help message
 
@@ -101,6 +102,22 @@ function getOutputDirectory(args) {
   return getOptionValue(args, "--output-dir");
 }
 
+function getMaxUnhealthy(args) {
+  const rawValue = getOptionValue(args, "--max-unhealthy");
+
+  if (rawValue === undefined) {
+    return undefined;
+  }
+
+  const value = Number(rawValue);
+
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error("--max-unhealthy must be a non-negative integer.");
+  }
+
+  return value;
+}
+
 function getOutputFormat(args) {
   const format = getOptionValue(args, "--format") ?? "text";
 
@@ -156,12 +173,16 @@ function printConfigSummary(summary) {
   console.log(`Tagged checks: ${summary.taggedCount}`);
 }
 
-function getExitCode(results, { shouldFailOnUnhealthy, shouldFailOnWarning }) {
+function getExitCode(results, { shouldFailOnUnhealthy, shouldFailOnWarning, maxUnhealthy }) {
   if (shouldFailOnWarning && results.some((result) => result.severity !== "OK")) {
     return 1;
   }
 
   if (shouldFailOnUnhealthy && results.some((result) => !result.healthy)) {
+    return 1;
+  }
+
+  if (maxUnhealthy !== undefined && results.filter((result) => !result.healthy).length > maxUnhealthy) {
     return 1;
   }
 
@@ -182,6 +203,7 @@ async function runCli(args = process.argv.slice(2)) {
 
     const shouldFailOnUnhealthy = args.includes("--fail-on-unhealthy");
     const shouldFailOnWarning = args.includes("--fail-on-warning");
+    const maxUnhealthy = getMaxUnhealthy(args);
     const configFile = getConfigFile(args);
     const concurrency = getConcurrency(args);
     const outputDirectory = getOutputDirectory(args);
@@ -245,7 +267,7 @@ async function runCli(args = process.argv.slice(2)) {
       console.log(JSON.stringify(buildJsonReport(results), null, 2));
     }
 
-    process.exitCode = getExitCode(results, { shouldFailOnUnhealthy, shouldFailOnWarning });
+    process.exitCode = getExitCode(results, { shouldFailOnUnhealthy, shouldFailOnWarning, maxUnhealthy });
   } catch (error) {
     console.error("\nFailed to run API Status Pulse");
     console.error(error.message);
@@ -262,6 +284,7 @@ module.exports = {
   getOptionValues,
   getConcurrency,
   getOutputDirectory,
+  getMaxUnhealthy,
   getOutputFormat,
   getTags,
   buildRunPlan,
