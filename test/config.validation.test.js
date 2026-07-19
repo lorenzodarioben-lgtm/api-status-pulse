@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { loadChecks, validateCheck } = require("../src/config");
+const { loadChecks, validateCheck, filterEnabledChecks } = require("../src/config");
 
 const validCheck = {
   name: "Example API",
@@ -124,4 +124,14 @@ test("adds the source path to invalid JSON errors", () => {
   fs.writeFileSync(configPath, "{");
 
   assert.throws(() => loadChecks(configPath), new RegExp(`invalid JSON: ${configPath.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}`));
+});
+
+test("supports explicitly disabled checks", () => {
+  assert.doesNotThrow(() => validateCheck({ ...validCheck, enabled: false }));
+  assert.throws(() => validateCheck({ ...validCheck, enabled: "false" }), /enabled as a boolean/);
+
+  assert.deepEqual(
+    filterEnabledChecks([{ ...validCheck }, { ...validCheck, name: "Disabled", enabled: false }]).map((check) => check.name),
+    ["Example API"],
+  );
 });

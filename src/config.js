@@ -59,6 +59,10 @@ function validateCheck(check) {
     throw new Error(`Check "${check.name}" cannot define body for ${check.method} requests.`);
   }
 
+  if (check.enabled !== undefined && typeof check.enabled !== "boolean") {
+    throw new Error(`Check "${check.name}" must define enabled as a boolean.`);
+  }
+
   if (!Array.isArray(check.expectedStatus) || check.expectedStatus.length === 0) {
     throw new Error(`Check "${check.name}" must define expectedStatus as a non-empty array.`);
   }
@@ -163,10 +167,20 @@ function validateUniqueValues(checks, fieldName) {
   }
 }
 
+function isCheckEnabled(check) {
+  return check.enabled !== false;
+}
+
+function filterEnabledChecks(checks) {
+  return checks.filter(isCheckEnabled);
+}
+
 module.exports = {
   loadChecks,
   validateChecks,
   validateCheck,
   validateUrl,
   validateHeaders,
+  isCheckEnabled,
+  filterEnabledChecks,
 };

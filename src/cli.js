@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const { loadChecks } = require("./config");
+const { loadChecks, filterEnabledChecks } = require("./config");
 const { checkEndpoint } = require("./checker");
 const { runChecks } = require("./runner");
 const { printResults, saveReports, buildJsonReport } = require("./report");
@@ -107,7 +107,12 @@ async function runCli(args = process.argv.slice(2)) {
     const shouldSkipReports = args.includes("--no-report");
     const outputFormat = getOutputFormat(args);
 
-    const checks = loadChecks(configFile);
+    const checks = filterEnabledChecks(loadChecks(configFile));
+
+    if (checks.length === 0) {
+      throw new Error("No enabled endpoint checks were found in the config file.");
+    }
+
     const results = await runChecks(checks, checkEndpoint, concurrency);
 
     if (outputFormat === "text") {
